@@ -74,6 +74,51 @@
         recalc();
     }
 
+
+    // DNS record form: show the fields that apply to the chosen record type.
+    var dnsType = document.querySelector('[data-dns-type]');
+    if (dnsType) {
+        var placeholders = { A: '203.0.113.10', AAAA: '2001:db8::1', CNAME: 'target.example.com', ALIAS: 'target.example.com',
+            MX: 'mail.example.com', TXT: 'v=spf1 include:example.com ~all', NS: 'ns1.example.com', SRV: 'sip.example.com', CAA: 'letsencrypt.org' };
+        var syncDns = function () {
+            var t = dnsType.value;
+            document.querySelectorAll('[data-dns-fields]').forEach(function (el) {
+                el.hidden = el.getAttribute('data-dns-fields').split(' ').indexOf(t) === -1;
+            });
+            var help = document.querySelector('template[data-help-for="' + t + '"]');
+            var target = document.querySelector('[data-dns-help]');
+            if (help && target) target.textContent = help.innerHTML.replace(/&amp;/g, '&');
+            var value = document.getElementById('value');
+            if (value) value.placeholder = placeholders[t] || '';
+        };
+        dnsType.addEventListener('change', syncDns);
+        syncDns();
+    }
+
+    // Copy-to-clipboard buttons: <button data-copy="text">
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!navigator.clipboard) return;
+            navigator.clipboard.writeText(btn.getAttribute('data-copy')).then(function () {
+                var old = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check2"></i>';
+                window.setTimeout(function () { btn.innerHTML = old; }, 1200);
+            });
+        });
+    });
+
+    // Reveal secrets on demand: <button data-reveal="elementId">
+    document.querySelectorAll('[data-reveal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var el = document.getElementById(btn.getAttribute('data-reveal'));
+            if (!el) return;
+            var hidden = el.getAttribute('data-hidden') !== 'false';
+            el.textContent = hidden ? el.getAttribute('data-secret') : '••••••••••••';
+            el.setAttribute('data-hidden', hidden ? 'false' : 'true');
+            btn.querySelector('i').className = hidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    });
+
     // Keep the active settings tab in the URL hash.
     var hash = window.location.hash;
     if (hash && document.querySelector('[data-bs-target="' + hash + '"]') && window.bootstrap) {

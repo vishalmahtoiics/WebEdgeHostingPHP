@@ -116,6 +116,10 @@ final class SettingsSchema
                 'fields' => [
                     'provider.api_timeout' => ['label' => 'Provider API timeout (seconds)', 'type' => 'number', 'default' => '30'],
                     'provider.auto_sync' => ['label' => 'Sync provider resources during cron', 'type' => 'bool', 'default' => '1'],
+                    'provider.sync_interval_hours' => ['label' => 'Automatic sync interval (hours)', 'type' => 'number', 'default' => '6'],
+                    'provider.ssl_expiring_days' => ['label' => 'Mark SSL as "expiring soon" within (days)', 'type' => 'number', 'default' => '30'],
+                    'provider.db_host_display' => ['label' => 'Database host shown to customers', 'type' => 'text', 'default' => 'localhost', 'help' => 'Provider server names are never shown to customers.'],
+                    'provider.phpmyadmin_url' => ['label' => 'Self-hosted phpMyAdmin URL (optional)', 'type' => 'url', 'default' => '', 'help' => 'If empty, customers get a one-time sign-on link from the provider (its address may show the provider domain).'],
                     'provider.nameserver_1' => ['label' => 'Nameserver 1 shown to customers', 'type' => 'text', 'default' => ''],
                     'provider.nameserver_2' => ['label' => 'Nameserver 2 shown to customers', 'type' => 'text', 'default' => ''],
                 ],

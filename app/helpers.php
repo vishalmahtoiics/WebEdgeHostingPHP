@@ -219,7 +219,13 @@ function status_badge(?string $status): string
         'suspended' => 'danger', 'failed' => 'danger', 'failure' => 'danger', 'expired' => 'danger', 'overdue' => 'danger',
         'cancelled' => 'secondary', 'closed' => 'secondary', 'void' => 'dark', 'withdrawn' => 'secondary',
         'refunded' => 'info', 'info' => 'info', 'skipped' => 'secondary',
+        'ok' => 'success', 'error' => 'danger', 'missing' => 'danger', 'disabled' => 'secondary', 'provisioning' => 'info', 'unknown' => 'secondary',
+        'not_available' => 'secondary', 'pending_setup' => 'warning', 'running' => 'success', 'stopped' => 'secondary',
     ];
+    $labels = ['expiring' => 'Expiring soon', 'not_available' => 'Not available', 'pending_setup' => 'Pending setup'];
+    if (isset($labels[$status ?? ''])) {
+        return '<span class="badge rounded-pill text-bg-' . ($map[$status] ?? 'secondary') . ' badge-status">' . e($labels[$status]) . '</span>';
+    }
     $cls = $map[$status ?? ''] ?? 'secondary';
     return '<span class="badge rounded-pill text-bg-' . $cls . ' badge-status">' . e(ucfirst(str_replace('_', ' ', (string) $status))) . '</span>';
 }
@@ -295,4 +301,10 @@ function logo_url(): ?string
 {
     $logo = (string) setting('brand.logo');
     return $logo !== '' ? url($logo) : null;
+}
+
+/** Customers for assignment dropdowns. */
+function customer_options(): array
+{
+    return App\Core\DB::all("SELECT id, name, code FROM customers WHERE status <> 'closed' ORDER BY name");
 }

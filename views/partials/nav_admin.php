@@ -7,6 +7,16 @@ $sections = [
     'Customers' => [
         ['Customers', 'people', '/admin/customers', 'customers.view'],
     ],
+    'Hosting' => [
+        ['Websites', 'window', '/admin/websites', 'websites.view'],
+        ['Domains & DNS', 'globe2', '/admin/domains', 'domains.view'],
+        ['Databases', 'database', '/admin/databases', 'databases.view'],
+        ['SSL certificates', 'shield-lock', '/admin/ssl', 'domains.view'],
+    ],
+    'Providers' => [
+        ['Provider accounts', 'hdd-network', '/admin/providers', 'providers.view'],
+        ['Discovered resources', 'cloud-download', '/admin/resources', 'providers.view'],
+    ],
     'Billing' => [
         ['Plans', 'box-seam', '/admin/plans', 'plans.view'],
         ['Subscriptions', 'arrow-repeat', '/admin/subscriptions', 'subscriptions.view'],

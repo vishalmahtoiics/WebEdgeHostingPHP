@@ -4,6 +4,12 @@ $sections = [
     '' => [
         ['Dashboard', 'speedometer2', '/customer', null, true],
     ],
+    'Hosting' => [
+        ['Websites', 'window', '/customer/websites', 'websites'],
+        ['Domains & DNS', 'globe2', '/customer/domains', 'domains'],
+        ['Databases', 'database', '/customer/databases', 'databases'],
+        ['SSL certificates', 'shield-lock', '/customer/ssl', null],
+    ],
     'Billing' => [
         ['Subscription', 'arrow-repeat', '/customer/subscription', 'billing'],
         ['Plans', 'box-seam', '/customer/plans', 'billing', false, 'customer.show_plans'],

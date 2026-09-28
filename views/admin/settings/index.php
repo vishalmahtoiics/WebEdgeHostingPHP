@@ -69,7 +69,7 @@ use App\Support\IndianStates;
                 <?php endforeach; ?>
                 </div>
                 <?php if ($active === 'provider'): ?>
-                    <div class="alert alert-info small mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Hosting provider accounts (API credentials, connection tests and resource sync) are managed in the Providers section, arriving in the next release. Provider names and IDs are never shown to customers.</div>
+                    <div class="alert alert-info small mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Hosting provider accounts (API credentials, connection tests and resource sync) are managed under <a href="<?= e(url('/admin/providers')) ?>">Providers</a>. Provider names and IDs are never shown to customers.</div>
                 <?php endif; ?>
             </div>
             <div class="card-footer bg-white d-flex flex-wrap gap-2">

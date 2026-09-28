@@ -153,8 +153,29 @@ $manage = can('customers.manage');
     </div>
 
     <div class="tab-pane fade" id="tab-resources" role="tabpanel">
-        <div class="card">
-            <?= partial('partials/empty', ['icon' => 'window-stack', 'message' => 'Websites, domains, databases and mailboxes', 'hint' => 'Assigned hosting resources will appear here once provider management is enabled.']) ?>
+        <div class="row g-3">
+            <?php
+            $blocks = [
+                ['Websites', 'window', $websites, static fn ($w) => ['/admin/websites/' . $w['id'], $w['domain'], status_badge($w['status'])], '/admin/websites/create?customer_id=' . $c['id'], 'websites.manage'],
+                ['Domains', 'globe2', $domains, static fn ($d) => ['/admin/domains/' . $d['id'], $d['name'], status_badge($d['status'])], '/admin/domains/create?customer_id=' . $c['id'], 'domains.manage'],
+                ['Databases', 'database', $databases, static fn ($d) => ['/admin/databases/' . $d['id'], $d['name'], '<span class="small text-muted">' . e($d['domain'] ?? '') . '</span>'], null, null],
+                ['VPS', 'hdd-rack', $vps, static fn ($v) => [null, $v['name'], status_badge($v['status'])], null, null],
+            ];
+            foreach ($blocks as [$label, $icon, $items, $row, $addUrl, $perm]): ?>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-<?= $icon ?> me-1"></i><?= e($label) ?> (<?= count($items) ?>)</span>
+                            <?php if ($addUrl && can($perm)): ?><a class="btn btn-sm btn-light" href="<?= e(url($addUrl)) ?>"><i class="bi bi-plus-lg"></i></a><?php endif; ?></div>
+                        <?php if (!$items): ?><div class="card-body small text-muted">None assigned.</div><?php else: ?>
+                            <ul class="list-group list-group-flush small">
+                                <?php foreach ($items as $it): [$href, $name, $badge] = $row($it); ?>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center"><?= $href ? '<a href="' . e(url($href)) . '">' . e($name) . '</a>' : e($name) ?><?= $badge ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
     </div>
 

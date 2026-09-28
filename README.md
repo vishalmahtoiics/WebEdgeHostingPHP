@@ -9,8 +9,8 @@ The platform is being built in three phases.
 | Phase | Scope | Status |
 |---|---|---|
 | **1. Core platform** | Admin & customer panels, authentication, customers, customer users, roles & permissions, plans, subscriptions, renewals, GST invoices, credit notes, payments, notifications, activity & security logs, white-label settings, search & filters, responsive UI | ✅ Done |
-| **2. Hosting** | Provider accounts (Hostinger API), resource discovery & claiming, domains, DNS, websites, databases, SSL | ⏳ Next |
-| **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ⏳ Planned |
+| **2. Hosting** | Provider accounts (Hostinger API), resource discovery & claiming, domains, DNS, websites, databases, SSL | ✅ Done |
+| **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ⏳ Next |
 
 ## Requirements
 
@@ -94,7 +94,9 @@ php -S 127.0.0.1:8080 -t public public/index.php
 ```
 app/
   Core/          DB, Router, Auth, Session, CSRF, Crypto, Settings, Logger, Migrator, View
-  Services/      Invoice, Payment, Subscription, Renewal, GST, Notification, Mailer, PlanLimits
+  Providers/     ProviderDriver interface, HostingerDriver, ManualDriver, ProviderManager
+  Services/      Invoice, Payment, Subscription, Renewal, GST, Notification, Mailer, PlanLimits,
+                 ProviderSync, Domain, Dns, Website, Database, Ssl
   Payments/      Gateway interface + Razorpay scaffold
   Controllers/   Admin/*, Customer/*, Auth
   Support/       Money, BillingCycle, Permissions, SettingsSchema, IndianStates
@@ -102,12 +104,38 @@ app/
 views/           PHP templates (layouts, partials, admin, customer, shared)
 public/          Web root: index.php, install.php, assets (Bootstrap vendored locally)
 database/migrations/   SQL migrations
-cron/cron.php    Renewals, overdue marking, expiry warnings, log cleanup
+cron/cron.php    Renewals, overdue marking, expiry warnings, provider sync, SSL checks, log cleanup
 bin/migrate.php  Apply migrations
 ```
 
-## Hostinger API notes (for phase 2 and 3)
+## Features (Phase 2 — hosting)
 
-- **Supported by the API:** domains, DNS zones, websites and hosting, MySQL databases, SSL and VPS. These are handled by a provider "driver", and customers only ever see WebEdge.
-- **Mailboxes and aliases:** handled through Hostinger's separate Mail API, which needs its own token.
-- **File manager and code editor:** these are not part of the Hostinger API, so they will connect to each website over SFTP/FTP.
+**Connecting Hostinger**
+1. In hPanel go to **Account → API** and create an API token (a dedicated one for this panel).
+2. In WebEdge, open **Providers → Add provider account**, choose *Hostinger* and paste the token. The connection is tested straight away.
+3. Click **Sync resources**. Everything the token can see appears under **Discovered resources**: domains, websites, hosting accounts and plans, databases and VPS.
+4. **Claim** each resource and optionally assign it to a customer. Claiming a website can also claim its domain and databases. A claimed domain loads its live DNS zone.
+5. The cron job re-syncs automatically (every 6 hours by default, see **Settings → Provider**). Resources that disappear at the provider are flagged as *missing*.
+
+**What each area does**
+- **Providers:** add, edit (the token is never shown again), test, sync, enable/disable and remove accounts. Multiple accounts are supported. Credential changes are written to the security log.
+- **Domains:** added manually or claimed from discovery (the list shows which, and who each domain is assigned to). You can assign, suspend, refresh registrar details (status, expiry, nameservers) and remove from the panel.
+- **DNS:** A, AAAA, CNAME, ALIAS, MX, TXT, NS, SRV and CAA records, managed per domain.
+  - Records are validated locally (CNAME conflicts, IP and hostname formats) and by the provider's validation endpoint.
+  - **Publish** compares the local zone with the live zone and sends only the record sets that changed. Record sets removed locally are deleted at the provider, and everything else is left untouched.
+  - SOA and the domain's own NS records are staff-only.
+- **Websites:** claim existing ones or create new ones on a hosting plan through the API. New websites show as *provisioning* until the next sync. You can assign, suspend, delete (optionally at the provider too) and install SSL.
+- **Databases:** create (the account prefix is added automatically, and a strong password can be generated), view credentials (the password is stored encrypted), change the password, delete, and open phpMyAdmin. Customers are limited by their plan's database allowance.
+- **SSL:** a live certificate check (issuer, valid from/until, days remaining), with the status *Active*, *Expiring soon*, *Expired* or *Not available*. Certificates are re-checked daily by cron, and the provider's SSL status and install are available too.
+
+**White-label rules**
+- Customers never see provider names, account usernames, order IDs, document roots or API errors. Provider errors reach customers only as a generic message (or, for validation errors, only the part about their own input).
+- Database host is shown to customers as `localhost` (configurable).
+- phpMyAdmin: by default customers get a one-time sign-on link from the provider, and **its address shows the provider's domain**. For full white-labelling, host phpMyAdmin yourself and set **Settings → Provider → Self-hosted phpMyAdmin URL**.
+- Customers can still see DNS values that point at provider infrastructure, such as Hostinger's MX mail servers. Vanity nameservers and mail hostnames would be needed to hide those.
+
+## Hostinger API notes
+
+- The integration is built against Hostinger's official OpenAPI spec (v1.55, `github.com/hostinger/api`). During development it was tested against a mock server that follows the same request and response shapes, **not against a live Hostinger account**. Test with your own token before you rely on it.
+- Website creation is asynchronous at Hostinger. The first website on a new plan needs a datacenter code.
+- **Phase 3:** Hostinger's API has mailbox, alias and forwarder endpoints (`/api/mail/v1`), which will be used for email. Its file API is read-only, so the file manager and code editor will connect to each website over SFTP.

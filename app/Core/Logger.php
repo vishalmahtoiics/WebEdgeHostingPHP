@@ -65,6 +65,9 @@ final class Logger
         'subscriptions.create', 'subscriptions.change_plan', 'subscriptions.renew', 'renewals.renew',
         'subscriptions.activated', 'subscriptions.reactivated', 'subscriptions.suspended',
         'subscriptions.cancelled', 'subscriptions.expired',
+        'domains.assign', 'domains.claim', 'dns.publish', 'dns.import',
+        'websites.create', 'websites.assign', 'websites.ssl_install',
+        'databases.create', 'databases.password', 'databases.delete',
     ];
 
     /** SQL condition (on activity_logs aliased as $alias) for rows a customer may see. */

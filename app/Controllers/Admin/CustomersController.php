@@ -109,6 +109,10 @@ final class CustomersController extends Controller
             'balance' => (int) DB::value("SELECT COALESCE(SUM(total - amount_paid - amount_credited), 0) FROM invoices WHERE customer_id = ? AND status IN ('pending','due','failed')", [$id]),
             'paidTotal' => (int) DB::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = ? AND status = 'paid'", [$id]),
             'current' => SubscriptionService::current($id),
+            'websites' => DB::all('SELECT id, domain, status FROM websites WHERE customer_id = ? ORDER BY domain', [$id]),
+            'domains' => DB::all('SELECT id, name, status, source, expires_at FROM domains WHERE customer_id = ? ORDER BY name', [$id]),
+            'databases' => DB::all('SELECT d.id, d.name, w.domain FROM hosting_databases d LEFT JOIN websites w ON w.id = d.website_id WHERE d.customer_id = ? ORDER BY d.name', [$id]),
+            'vps' => DB::all("SELECT name, status, meta FROM provider_resources WHERE type = 'vps' AND local_type = 'customer' AND local_id = ?", [$id]),
             'plans' => DB::all("SELECT * FROM plans WHERE status = 'active' ORDER BY sort_order, name"),
         ]);
     }

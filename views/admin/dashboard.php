@@ -64,12 +64,12 @@ $max = max(1, ...array_values($revenueByMonth));
         <div class="card h-100">
             <div class="card-header">Provider status</div>
             <?php if (!$providers): ?>
-                <?= partial('partials/empty', ['icon' => 'hdd-network', 'message' => 'No provider accounts yet', 'hint' => 'Provider management arrives in the next release.']) ?>
+                <?= partial('partials/empty', ['icon' => 'hdd-network', 'message' => 'No provider accounts yet', 'hint' => 'Add one under Providers to discover domains and websites.']) ?>
             <?php else: ?>
                 <ul class="list-group list-group-flush">
                     <?php foreach ($providers as $p): ?>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div><div class="fw-medium"><?= e($p['label']) ?></div><div class="small text-muted">Synced <?= e(time_ago($p['last_sync_at'])) ?></div></div>
+                            <div><a class="fw-medium" href="<?= e(url('/admin/providers/' . $p['id'])) ?>"><?= e($p['label']) ?></a><div class="small text-muted">Synced <?= e(time_ago($p['last_sync_at'])) ?></div></div>
                             <?= status_badge($p['is_enabled'] ? $p['status'] : 'disabled') ?>
                         </li>
                     <?php endforeach; ?>

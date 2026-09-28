@@ -39,6 +39,73 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
         $r->post('/{id}/users/{uid}/delete', [Admin\CustomerUsersController::class, 'destroy']);
     });
 
+    // Hosting providers & discovered resources
+    $r->group('/providers', ['perm' => 'providers.view'], static function ($r): void {
+        $r->get('', [Admin\ProvidersController::class, 'index']);
+        $r->get('/{id}', [Admin\ProvidersController::class, 'show']);
+    });
+    $r->group('/providers', ['perm' => 'providers.manage'], static function ($r): void {
+        $r->form('/create', [Admin\ProvidersController::class, 'create'], [Admin\ProvidersController::class, 'store']);
+        $r->form('/{id}/edit', [Admin\ProvidersController::class, 'edit'], [Admin\ProvidersController::class, 'update']);
+        $r->post('/{id}/test', [Admin\ProvidersController::class, 'test']);
+        $r->post('/{id}/sync', [Admin\ProvidersController::class, 'sync']);
+        $r->post('/{id}/toggle', [Admin\ProvidersController::class, 'toggle']);
+        $r->post('/{id}/delete', [Admin\ProvidersController::class, 'destroy']);
+    });
+    $r->get('/resources', [Admin\ResourcesController::class, 'index'], ['perm' => 'providers.view']);
+    $r->post('/resources/{id}/claim', [Admin\ResourcesController::class, 'claim'], ['perm' => 'providers.view']);
+
+    // Domains & DNS
+    $r->group('/domains', ['perm' => 'domains.view'], static function ($r): void {
+        $r->get('', [Admin\DomainsController::class, 'index']);
+        $r->get('/{id}', [Admin\DomainsController::class, 'show']);
+    });
+    $r->group('/domains', ['perm' => 'domains.manage'], static function ($r): void {
+        $r->form('/create', [Admin\DomainsController::class, 'create'], [Admin\DomainsController::class, 'store']);
+        $r->form('/{id}/edit', [Admin\DomainsController::class, 'edit'], [Admin\DomainsController::class, 'update']);
+        $r->post('/{id}/assign', [Admin\DomainsController::class, 'assign']);
+        $r->post('/{id}/status', [Admin\DomainsController::class, 'status']);
+        $r->post('/{id}/refresh', [Admin\DomainsController::class, 'refresh']);
+        $r->post('/{id}/delete', [Admin\DomainsController::class, 'destroy']);
+    });
+    $r->get('/domains/{id}/dns', [Admin\DnsController::class, 'show'], ['perm' => 'dns.view']);
+    $r->post('/domains/{id}/dns/validate', [Admin\DnsController::class, 'validate'], ['perm' => 'dns.view']);
+    $r->group('/domains/{id}/dns', ['perm' => 'dns.manage'], static function ($r): void {
+        $r->post('/records', [Admin\DnsController::class, 'store']);
+        $r->post('/records/{rid}', [Admin\DnsController::class, 'update']);
+        $r->post('/records/{rid}/delete', [Admin\DnsController::class, 'destroy']);
+        $r->post('/publish', [Admin\DnsController::class, 'publish']);
+        $r->post('/import', [Admin\DnsController::class, 'import']);
+    });
+
+    // Websites, databases, SSL
+    $r->group('/websites', ['perm' => 'websites.view'], static function ($r): void {
+        $r->get('', [Admin\WebsitesController::class, 'index']);
+        $r->get('/{id}', [Admin\WebsitesController::class, 'show']);
+    });
+    $r->group('/websites', ['perm' => 'websites.manage'], static function ($r): void {
+        $r->form('/create', [Admin\WebsitesController::class, 'create'], [Admin\WebsitesController::class, 'store']);
+        $r->post('/{id}/edit', [Admin\WebsitesController::class, 'update']);
+        $r->post('/{id}/assign', [Admin\WebsitesController::class, 'assign']);
+        $r->post('/{id}/status', [Admin\WebsitesController::class, 'status']);
+        $r->post('/{id}/delete', [Admin\WebsitesController::class, 'destroy']);
+        $r->post('/{id}/ssl', [Admin\WebsitesController::class, 'ssl']);
+        $r->post('/{id}/ssl-status', [Admin\WebsitesController::class, 'sslStatus']);
+    });
+    $r->group('/databases', ['perm' => 'databases.view'], static function ($r): void {
+        $r->get('', [Admin\DatabasesController::class, 'index']);
+        $r->get('/{id}', [Admin\DatabasesController::class, 'show']);
+    });
+    $r->group('/databases', ['perm' => 'databases.manage'], static function ($r): void {
+        $r->form('/create', [Admin\DatabasesController::class, 'create'], [Admin\DatabasesController::class, 'store']);
+        $r->post('/{id}/password', [Admin\DatabasesController::class, 'password']);
+        $r->post('/{id}/delete', [Admin\DatabasesController::class, 'destroy']);
+        $r->get('/{id}/phpmyadmin', [Admin\DatabasesController::class, 'phpmyadmin']);
+    });
+    $r->get('/ssl', [Admin\SslController::class, 'index'], ['perm' => 'domains.view']);
+    $r->post('/ssl/check', [Admin\SslController::class, 'check'], ['perm' => 'domains.view']);
+    $r->post('/ssl/check-all', [Admin\SslController::class, 'checkAll'], ['perm' => 'domains.view']);
+
     $r->group('/plans', ['perm' => 'plans.view'], static function ($r): void {
         $r->get('', [Admin\PlansController::class, 'index']);
         $r->get('/{id}', [Admin\PlansController::class, 'show']);
@@ -117,6 +184,35 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
         $r->get('/invoices/{id}/print', [Customer\BillingController::class, 'printInvoice']);
         $r->get('/invoices/{id}/download', [Customer\BillingController::class, 'downloadInvoice']);
     });
+    $r->group('', ['perm' => 'websites'], static function ($r): void {
+        $r->get('/websites', [Customer\HostingController::class, 'websites']);
+        $r->get('/websites/{id}', [Customer\HostingController::class, 'website']);
+        $r->post('/websites/{id}/ssl', [Customer\HostingController::class, 'installSsl']);
+    });
+    $r->group('', ['perm' => 'domains'], static function ($r): void {
+        $r->get('/domains', [Customer\HostingController::class, 'domains']);
+        $r->get('/domains/{id}', [Customer\HostingController::class, 'domain']);
+    });
+    $r->group('/domains/{id}/dns', ['perm' => 'dns'], static function ($r): void {
+        $r->get('', [Customer\DnsController::class, 'show']);
+        $r->post('/records', [Customer\DnsController::class, 'store']);
+        $r->post('/records/{rid}', [Customer\DnsController::class, 'update']);
+        $r->post('/records/{rid}/delete', [Customer\DnsController::class, 'destroy']);
+        $r->post('/validate', [Customer\DnsController::class, 'validate']);
+        $r->post('/publish', [Customer\DnsController::class, 'publish']);
+        $r->post('/import', [Customer\DnsController::class, 'import']);
+    });
+    $r->group('/databases', ['perm' => 'databases'], static function ($r): void {
+        $r->get('', [Customer\HostingController::class, 'databases']);
+        $r->form('/create', [Customer\HostingController::class, 'createDatabase'], [Customer\HostingController::class, 'storeDatabase']);
+        $r->get('/{id}', [Customer\HostingController::class, 'database']);
+        $r->post('/{id}/password', [Customer\HostingController::class, 'databasePassword']);
+        $r->post('/{id}/delete', [Customer\HostingController::class, 'deleteDatabase']);
+        $r->get('/{id}/phpmyadmin', [Customer\HostingController::class, 'phpmyadmin']);
+    });
+    $r->get('/ssl', [Customer\HostingController::class, 'ssl']);
+    $r->post('/ssl/check', [Customer\HostingController::class, 'sslCheck']);
+
     $r->get('/notifications', [Customer\NotificationsController::class, 'index']);
     $r->post('/notifications/read', [Customer\NotificationsController::class, 'markRead']);
     $r->get('/notifications/{id}', [Customer\NotificationsController::class, 'open']);
