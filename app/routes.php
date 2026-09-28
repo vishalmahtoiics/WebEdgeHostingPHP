@@ -7,6 +7,7 @@ use App\Controllers\Admin;
 use App\Controllers\AuthController;
 use App\Controllers\Customer;
 use App\Controllers\HomeController;
+use App\Controllers\WebhookController;
 
 $router->get('/', [HomeController::class, 'index']);
 
@@ -185,6 +186,8 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 
     $r->get('/payments', [Admin\PaymentsController::class, 'index'], ['perm' => 'billing.view']);
     $r->post('/payments/{id}/refund', [Admin\PaymentsController::class, 'refund'], ['perm' => 'billing.manage']);
+    $r->get('/payments/online', [Admin\PaymentsController::class, 'online'], ['perm' => 'billing.view']);
+    $r->post('/payments/online/{id}/resolve', [Admin\PaymentsController::class, 'resolve'], ['perm' => 'billing.manage']);
     $r->get('/credit-notes', [Admin\CreditNotesController::class, 'index'], ['perm' => 'billing.view']);
     $r->get('/credit-notes/{id}/print', [Admin\CreditNotesController::class, 'printView'], ['perm' => 'billing.view']);
 
@@ -221,6 +224,8 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
         $r->get('/invoices/{id}', [Customer\BillingController::class, 'invoice']);
         $r->get('/invoices/{id}/print', [Customer\BillingController::class, 'printInvoice']);
         $r->get('/invoices/{id}/download', [Customer\BillingController::class, 'downloadInvoice']);
+        $r->post('/invoices/{id}/pay', [Customer\BillingController::class, 'pay']);
+        $r->post('/invoices/{id}/pay/verify', [Customer\BillingController::class, 'verifyPayment']);
     });
     $r->group('', ['perm' => 'websites'], static function ($r): void {
         $r->get('/websites', [Customer\HostingController::class, 'websites']);
@@ -282,3 +287,6 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
     $r->form('/profile', [Customer\ProfileController::class, 'edit'], [Customer\ProfileController::class, 'update']);
     $r->post('/profile/password', [Customer\ProfileController::class, 'password']);
 });
+
+// Payment gateway webhooks: authenticated by the gateway's HMAC signature, not a session.
+$router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay'], ['csrf' => false]);

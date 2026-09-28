@@ -1,4 +1,8 @@
 <?php use App\Services\PaymentService; ?>
+<?php if ($needsReview > 0): ?>
+    <div class="alert alert-warning d-flex justify-content-between align-items-center"><span><i class="bi bi-exclamation-triangle me-1"></i><?= (int) $needsReview ?> online payment<?= $needsReview === 1 ? '' : 's' ?> could not be applied automatically.</span><a class="btn btn-sm btn-warning" href="<?= e(url('/admin/payments/online', ['status' => 'review'])) ?>">Review</a></div>
+<?php endif; ?>
+<div class="d-flex justify-content-end mb-2"><a class="btn btn-sm btn-light" href="<?= e(url('/admin/payments/online')) ?>"><i class="bi bi-globe me-1"></i>Online checkouts</a></div>
 <p class="small text-muted">Collected for the current filter: <strong><?= e(money($collected)) ?></strong>. Payments are recorded from an invoice page.</p>
 <form class="we-filters row g-2 align-items-end" method="get">
     <div class="col-12 col-md-4"><label class="form-label small mb-1" for="q">Search</label><input class="form-control" id="q" name="q" value="<?= e(query('q')) ?>" placeholder="Invoice, customer or reference"></div>

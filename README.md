@@ -11,6 +11,7 @@ The platform is being built in three phases.
 | **1. Core platform** | Admin & customer panels, authentication, customers, customer users, roles & permissions, plans, subscriptions, renewals, GST invoices, credit notes, payments, notifications, activity & security logs, white-label settings, search & filters, responsive UI | ✅ Done |
 | **2. Hosting** | Provider accounts (Hostinger API), resource discovery & claiming, domains, DNS, websites, databases, SSL | ✅ Done |
 | **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ✅ Done |
+| **Online payments** | Razorpay checkout on customer invoices, webhook reconciliation, admin review queue | ✅ Done |
 
 ## Requirements
 
@@ -81,8 +82,8 @@ php -S 127.0.0.1:8080 -t public public/index.php
 
 - Passwords are hashed with bcrypt (`password_hash`) and rehashed automatically when needed.
 - Sessions use HttpOnly and SameSite cookies, a Secure flag over HTTPS, regeneration on login, an idle timeout and user-agent binding. Changing a password signs out other sessions.
-- Every POST request is CSRF-protected.
-- All output is escaped (`e()`). There are no inline scripts, and a strict Content-Security-Policy is sent (all assets are served locally).
+- Every POST request is CSRF-protected. The only exception is the payment webhook, which is authenticated by Razorpay's HMAC signature.
+- All output is escaped (`e()`). There are no inline scripts, and a strict Content-Security-Policy is sent (all assets are served locally). The customer checkout page is the only page that also allows Razorpay's script and iframe.
 - The database uses native prepared statements only.
 - Login is rate-limited per account and per IP, and all failures are logged.
 - Permissions are checked on every route. Customer data is isolated: every customer query is scoped to the signed-in customer's ID.
@@ -98,7 +99,7 @@ app/
   Files/         Filesystem interface, LocalFilesystem, FtpFilesystem, FileManager
   Services/      Invoice, Payment, Subscription, Renewal, GST, Notification, Mailer, PlanLimits,
                  ProviderSync, Domain, Dns, Website, Database, Ssl, Email
-  Payments/      Gateway interface + Razorpay scaffold
+  Payments/      Gateway interface + Razorpay (orders, capture, signatures)
   Controllers/   Admin/*, Customer/*, Auth
   Support/       Money, BillingCycle, Permissions, SettingsSchema, IndianStates
   routes.php
@@ -164,6 +165,20 @@ bin/migrate.php  Apply migrations
   - Binary and very large files are download-only.
   - Every change is written to the activity log.
 - **Access:** customers need the *File manager* permission and an active website. Admins need `files.manage`.
+
+## Online payments (Razorpay)
+
+1. In Razorpay, create API keys (start with `rzp_test_…` keys).
+2. In the panel, go to **Settings → Payments**. Tick *Enable Razorpay*, then enter the key ID and key secret.
+3. Recommended: in Razorpay, add a webhook to `https://your-panel/webhooks/razorpay` for the events `payment.captured`, `order.paid` and `payment.failed`. Enter the same webhook secret in the panel.
+
+How it works:
+
+- Open invoices show customers a **Pay now** button. The panel creates a Razorpay order for the current balance with auto-capture, and Razorpay Checkout opens (UPI, cards, net banking, wallets).
+- When the payment finishes, the panel checks Razorpay's signature. It then confirms with Razorpay that the payment was captured for exactly that order and amount, and records it. Paying the invoice also activates or reinstates the subscription, and the customer is notified.
+- The webhook records the payment even if the customer closes the browser. Callbacks and webhooks are idempotent, so a payment is never recorded twice.
+- Sometimes money arrives but can't be applied: for example, staff already recorded a bank transfer, or the amount doesn't match. The checkout is then flagged under **Payments → Online checkouts** for review. Refund it in Razorpay, or apply it manually, and then mark it resolved. The panel never over-pays an invoice.
+- Refunds are still processed in the Razorpay dashboard. Record them in the panel with **Refund**.
 
 ## Hostinger API notes
 

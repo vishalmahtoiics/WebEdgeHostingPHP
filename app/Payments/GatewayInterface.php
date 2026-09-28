@@ -20,6 +20,12 @@ interface GatewayInterface
     /** Verify a checkout callback. Returns the gateway payment id on success, null otherwise. */
     public function verifyPayment(array $payload): ?string;
 
+    /**
+     * Confirm with the gateway that a payment was captured for exactly this
+     * order and amount, capturing an authorised payment when needed.
+     */
+    public function confirmPayment(string $paymentId, string $orderId, int $amount, string $currency): bool;
+
     /** Verify a server-to-server webhook body + signature header. */
     public function verifyWebhook(string $body, string $signature): bool;
 }

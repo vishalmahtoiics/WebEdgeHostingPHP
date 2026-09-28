@@ -7,13 +7,14 @@ use App\Core\Settings;
 use RuntimeException;
 
 /**
- * Razorpay integration scaffold (Orders API + signature verification).
- * Enable it and add keys under Settings → Payments; the customer checkout
- * button is wired up in a later release.
+ * Razorpay Standard Checkout: Orders API, checkout signature verification,
+ * payment confirmation/capture and webhook signature verification.
+ * Enable it and add keys under Settings → Payments.
  */
 final class RazorpayGateway implements GatewayInterface
 {
     private const API = 'https://api.razorpay.com/v1';
+    public const CHECKOUT_JS = 'https://checkout.razorpay.com/v1/checkout.js';
 
     public function name(): string
     {
@@ -32,8 +33,9 @@ final class RazorpayGateway implements GatewayInterface
         $order = $this->request('POST', '/orders', [
             'amount' => $amount,
             'currency' => $invoice['currency'],
-            'receipt' => $invoice['invoice_number'],
-            'notes' => ['invoice_id' => (string) $invoice['id']],
+            'receipt' => mb_substr((string) $invoice['invoice_number'], 0, 40),
+            'payment_capture' => 1,
+            'notes' => ['invoice_id' => (string) $invoice['id'], 'invoice_number' => (string) $invoice['invoice_number']],
         ]);
         return [
             'order_id' => $order['id'],
@@ -62,6 +64,21 @@ final class RazorpayGateway implements GatewayInterface
         return hash_equals($expected, $signature) ? $paymentId : null;
     }
 
+    public function confirmPayment(string $paymentId, string $orderId, int $amount, string $currency): bool
+    {
+        if (!preg_match('/^pay_[A-Za-z0-9]+$/', $paymentId)) {
+            return false;
+        }
+        $p = $this->request('GET', '/payments/' . $paymentId);
+        if (($p['order_id'] ?? null) !== $orderId || (int) ($p['amount'] ?? -1) !== $amount || strtoupper((string) ($p['currency'] ?? '')) !== strtoupper($currency)) {
+            return false;
+        }
+        if (($p['status'] ?? '') === 'authorized') {
+            $p = $this->request('POST', '/payments/' . $paymentId . '/capture', ['amount' => $amount, 'currency' => $currency]);
+        }
+        return ($p['status'] ?? '') === 'captured';
+    }
+
     public function verifyWebhook(string $body, string $signature): bool
     {
         $secret = (string) Settings::get('payment.razorpay_webhook_secret');
@@ -70,21 +87,25 @@ final class RazorpayGateway implements GatewayInterface
 
     private function request(string $method, string $path, array $body = []): array
     {
-        $ch = curl_init(self::API . $path);
+        $base = rtrim((string) config('payments.razorpay_base_url', self::API), '/');
+        $ch = curl_init($base . $path);
         curl_setopt_array($ch, [
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_USERPWD => Settings::get('payment.razorpay_key_id') . ':' . Settings::get('payment.razorpay_key_secret'),
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS => $body ? json_encode($body) : null,
         ]);
+        if ($body) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+        }
         $raw = curl_exec($ch);
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         $data = is_string($raw) ? json_decode($raw, true) : null;
         if ($status >= 300 || !is_array($data)) {
-            throw new RuntimeException('Payment gateway request failed (HTTP ' . $status . ').');
+            $detail = is_array($data) ? (string) ($data['error']['description'] ?? '') : '';
+            throw new RuntimeException('Payment gateway request failed (HTTP ' . $status . ')' . ($detail !== '' ? ': ' . $detail : '.'));
         }
         return $data;
     }

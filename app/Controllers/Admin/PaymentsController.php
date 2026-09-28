@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
 use App\Core\DB;
+use App\Services\OnlinePaymentService;
 use App\Services\PaymentService;
 use App\Support\Money;
 
@@ -40,6 +41,7 @@ final class PaymentsController extends Controller
         return $this->view('admin/payments/index', [
             'title' => 'Payments',
             'page' => paginate("SELECT p.*, i.invoice_number, c.name AS customer_name, c.code AS customer_code $from WHERE $w ORDER BY p.id DESC", "SELECT COUNT(*) $from WHERE $w", $params, 25),
+            'needsReview' => DB::safeCount("SELECT COUNT(*) FROM payment_orders WHERE status = 'review'"),
             'collected' => (int) DB::value("SELECT COALESCE(SUM(p.amount), 0) $from WHERE $w AND p.status = 'paid'", $params),
         ]);
     }
@@ -82,5 +84,41 @@ final class PaymentsController extends Controller
             $this->failed('/admin/payments', [$e->getMessage()]);
         }
         $this->success('/admin/invoices/' . $payment['invoice_id'], 'Payment marked as refunded. Remember to issue a credit note if the supply is being reversed.');
+    }
+
+    /** Online checkout attempts, with the ones needing staff attention first. */
+    public function online(): string
+    {
+        $where = ['1 = 1'];
+        $params = [];
+        if (in_array($s = query('status'), ['created', 'paid', 'review', 'resolved'], true)) {
+            $where[] = 'o.status = ?';
+            $params[] = $s;
+        }
+        if (($q = query('q')) !== '') {
+            $where[] = '(i.invoice_number LIKE ? OR c.name LIKE ? OR o.gateway_order_id LIKE ? OR o.gateway_payment_id LIKE ?)';
+            $like = $this->like($q);
+            array_push($params, $like, $like, $like, $like);
+        }
+        $w = implode(' AND ', $where);
+        $from = 'FROM payment_orders o JOIN invoices i ON i.id = o.invoice_id JOIN customers c ON c.id = o.customer_id';
+        return $this->view('admin/payments/online', [
+            'title' => 'Online payments',
+            'page' => paginate("SELECT o.*, i.invoice_number, c.name AS customer_name, c.code AS customer_code $from WHERE $w ORDER BY o.status = 'review' DESC, o.id DESC", "SELECT COUNT(*) $from WHERE $w", $params, 25),
+        ]);
+    }
+
+    public function resolve(int $id): string
+    {
+        $note = mb_substr(input_str('note'), 0, 200);
+        if ($note === '') {
+            $this->failed('/admin/payments/online', ['Describe how the payment was handled (e.g. refunded in Razorpay, applied to another invoice).']);
+        }
+        try {
+            OnlinePaymentService::resolve($id, $note);
+        } catch (\RuntimeException $e) {
+            $this->failed('/admin/payments/online', [$e->getMessage()]);
+        }
+        $this->success('/admin/payments/online', 'Marked as resolved.');
     }
 }

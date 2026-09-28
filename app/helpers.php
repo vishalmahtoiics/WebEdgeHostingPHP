@@ -221,8 +221,9 @@ function status_badge(?string $status): string
         'refunded' => 'info', 'info' => 'info', 'skipped' => 'secondary',
         'ok' => 'success', 'error' => 'danger', 'missing' => 'danger', 'disabled' => 'secondary', 'provisioning' => 'info', 'unknown' => 'secondary',
         'not_available' => 'secondary', 'pending_setup' => 'warning', 'running' => 'success', 'stopped' => 'secondary',
+        'review' => 'warning', 'resolved' => 'secondary', 'created' => 'secondary',
     ];
-    $labels = ['expiring' => 'Expiring soon', 'not_available' => 'Not available', 'pending_setup' => 'Pending setup'];
+    $labels = ['review' => 'Needs review', 'created' => 'Started', 'expiring' => 'Expiring soon', 'not_available' => 'Not available', 'pending_setup' => 'Pending setup'];
     if (isset($labels[$status ?? ''])) {
         return '<span class="badge rounded-pill text-bg-' . ($map[$status] ?? 'secondary') . ' badge-status">' . e($labels[$status]) . '</span>';
     }

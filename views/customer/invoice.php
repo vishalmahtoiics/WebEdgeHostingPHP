@@ -16,9 +16,17 @@ $open = InvoiceService::isOpen($i);
 
 <?php if ($open): ?>
     <div class="alert alert-warning">
-        <strong>Balance due: <?= e(money(InvoiceService::balance($i))) ?></strong> by <?= e(fmt_date($i['due_date'])) ?>.
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div><strong>Balance due: <?= e(money(InvoiceService::balance($i))) ?></strong> by <?= e(fmt_date($i['due_date'])) ?>.</div>
+            <?php if (!empty($canPayOnline)): ?>
+                <form method="post" action="<?= e(url('/customer/invoices/' . $i['id'] . '/pay')) ?>">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-success"><i class="bi bi-credit-card me-1"></i>Pay now</button>
+                </form>
+            <?php endif; ?>
+        </div>
         <?php if (setting('billing.bank_details')): ?><div class="small mt-2" style="white-space:pre-line"><?= e(setting('billing.bank_details')) ?></div><?php endif; ?>
-        <div class="small mt-1">Please quote <strong><?= e($i['invoice_number']) ?></strong> as the payment reference.</div>
+        <div class="small mt-1"><?= !empty($canPayOnline) ? 'Or pay by bank transfer and quote' : 'Please quote' ?> <strong><?= e($i['invoice_number']) ?></strong> as the payment reference.</div>
     </div>
 <?php endif; ?>
 

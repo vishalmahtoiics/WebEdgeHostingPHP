@@ -99,10 +99,10 @@ final class SettingsSchema
             'payments' => [
                 'label' => 'Payments', 'icon' => 'credit-card',
                 'fields' => [
-                    'payment.razorpay_enabled' => ['label' => 'Enable Razorpay (online payments)', 'type' => 'bool', 'default' => '0'],
-                    'payment.razorpay_key_id' => ['label' => 'Razorpay key ID', 'type' => 'text', 'default' => ''],
+                    'payment.razorpay_enabled' => ['label' => 'Enable Razorpay (online payments)', 'type' => 'bool', 'default' => '0', 'help' => 'Customers get a "Pay now" button (UPI, cards, net banking, wallets) on open invoices.'],
+                    'payment.razorpay_key_id' => ['label' => 'Razorpay key ID', 'type' => 'text', 'default' => '', 'help' => 'Razorpay Dashboard → Account & Settings → API keys. Use rzp_test_… keys to try it out first.'],
                     'payment.razorpay_key_secret' => ['label' => 'Razorpay key secret', 'type' => 'secret', 'default' => ''],
-                    'payment.razorpay_webhook_secret' => ['label' => 'Razorpay webhook secret', 'type' => 'secret', 'default' => ''],
+                    'payment.razorpay_webhook_secret' => ['label' => 'Razorpay webhook secret', 'type' => 'secret', 'default' => '', 'help' => 'Recommended. In Razorpay add a webhook to ' . url('/webhooks/razorpay') . ' for payment.captured, order.paid and payment.failed, with this secret. It records payments even if the customer closes the browser.'],
                 ],
             ],
             'notifications' => [

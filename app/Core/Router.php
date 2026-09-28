@@ -7,7 +7,8 @@ namespace App\Core;
  * Minimal router. Route options:
  *   auth  => 'admin' | 'customer' | 'guest'
  *   perm  => permission key required (admin permission or customer module)
- * Every POST is CSRF-checked.
+ *   csrf  => false only for signed server-to-server callbacks (webhooks)
+ * Every other POST is CSRF-checked.
  */
 final class Router
 {
@@ -83,7 +84,7 @@ final class Router
     private function run(array $route, string $method, array $params): string
     {
         $opts = $route['opts'];
-        if ($method === 'POST' && !Csrf::verify($_POST['_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null))) {
+        if ($method === 'POST' && ($opts['csrf'] ?? true) && !Csrf::verify($_POST['_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null))) {
             throw new HttpException(419, 'Your form has expired. Please go back, refresh the page and try again.');
         }
         $auth = $opts['auth'] ?? null;
