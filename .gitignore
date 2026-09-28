@@ -1,0 +1,11 @@
+/config/config.php
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/cache/*
+!/storage/cache/.gitkeep
+/storage/installed.lock
+/storage/cron.lock
+/public/uploads/branding/*
+!/public/uploads/branding/.gitkeep
+/vendor/
+.DS_Store

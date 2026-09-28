@@ -1,0 +1,10 @@
+# WebEdge: route every request into public/ so app code, config and storage
+# are never reachable over the web (useful when the project sits in public_html).
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
