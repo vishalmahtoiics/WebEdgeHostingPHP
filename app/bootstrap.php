@@ -21,7 +21,8 @@ if (!is_file($configFile)) {
         fwrite(STDERR, "config/config.php is missing. Run the web installer or copy config/config.example.php.\n");
         exit(1);
     }
-    $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+    // "/public" is internal: the root .htaccess routes every request into it.
+    $base = (string) preg_replace('#/public$#', '', rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/'));
     header('Location: ' . $base . '/install.php');
     exit;
 }

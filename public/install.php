@@ -32,11 +32,8 @@ session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Strict']);
 $_SESSION['install_token'] ??= bin2hex(random_bytes(32));
 
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
-// When served through the root .htaccess the URL has no /public segment.
-if (str_ends_with($dir, '/public') && !str_contains($_SERVER['REQUEST_URI'] ?? '', '/public/')) {
-    $dir = substr($dir, 0, -7);
-}
+// "/public" is internal: the root .htaccess routes every request into it.
+$dir = (string) preg_replace('#/public$#', '', rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/'));
 $defaults = [
     'app_url' => $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . $dir,
     'db_host' => 'localhost', 'db_port' => '3306', 'db_name' => '', 'db_user' => '', 'db_pass' => '',
