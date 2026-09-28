@@ -112,6 +112,7 @@ final class CustomersController extends Controller
             'websites' => DB::all('SELECT id, domain, status FROM websites WHERE customer_id = ? ORDER BY domain', [$id]),
             'domains' => DB::all('SELECT id, name, status, source, expires_at FROM domains WHERE customer_id = ? ORDER BY name', [$id]),
             'databases' => DB::all('SELECT d.id, d.name, w.domain FROM hosting_databases d LEFT JOIN websites w ON w.id = d.website_id WHERE d.customer_id = ? ORDER BY d.name', [$id]),
+            'emailDomains' => DB::all('SELECT e.id, e.name, e.status, (SELECT COUNT(*) FROM mailboxes m WHERE m.email_domain_id = e.id) AS n FROM email_domains e WHERE e.customer_id = ? ORDER BY e.name', [$id]),
             'vps' => DB::all("SELECT name, status, meta FROM provider_resources WHERE type = 'vps' AND local_type = 'customer' AND local_id = ?", [$id]),
             'plans' => DB::all("SELECT * FROM plans WHERE status = 'active' ORDER BY sort_order, name"),
         ]);

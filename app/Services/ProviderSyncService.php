@@ -16,11 +16,12 @@ final class ProviderSyncService
         'database' => 'Databases',
         'hosting_account' => 'Hosting accounts',
         'hosting_order' => 'Hosting plans / orders',
+        'mail_order' => 'Email domains',
         'vps' => 'VPS',
     ];
 
     /** Types an admin can claim into a local, customer-assignable record. */
-    public const CLAIMABLE = ['domain', 'website', 'database', 'vps'];
+    public const CLAIMABLE = ['domain', 'website', 'database', 'mail_order', 'vps'];
 
     public static function test(int $providerId): array
     {
@@ -82,6 +83,15 @@ final class ProviderSyncService
             )->rowCount();
             self::refreshLocal($providerId);
         });
+
+        // Refresh mailboxes/aliases for claimed email domains (outside the transaction: API calls).
+        foreach (DB::column("SELECT local_id FROM provider_resources WHERE provider_id = ? AND type = 'mail_order' AND local_type = 'email_domain' AND is_missing = 0", [$providerId]) as $emailDomainId) {
+            try {
+                EmailService::import((int) $emailDomainId);
+            } catch (\Throwable $e) {
+                error_log("Email import for domain #$emailDomainId failed: " . $e->getMessage());
+            }
+        }
 
         $summary = sprintf('%d resources: %d new, %d missing', count($resources), $counts['new'], $counts['missing']);
         DB::update('providers', [
@@ -246,6 +256,11 @@ final class ProviderSyncService
                     ]);
                     self::markClaimed($resourceId, 'database', $id);
                     return ['database', $id];
+
+                case 'mail_order':
+                    $id = EmailService::createDomain((string) ($meta['domain'] ?? $r['name']), $customerId, $providerId, $r['external_id'], 'discovered', (int) $r['id']);
+                    self::markClaimed($resourceId, 'email_domain', $id);
+                    return ['email_domain', $id];
 
                 default: // vps: assigned to a customer as a reference record
                     if (!$customerId) {

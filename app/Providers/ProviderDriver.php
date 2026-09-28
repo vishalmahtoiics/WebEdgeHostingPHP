@@ -55,4 +55,15 @@ interface ProviderDriver
     // SSL
     public function sslStatus(string $account, string $domain): array;
     public function installSsl(string $account, string $domain): void;
+
+    // Email (one mail order per email domain)
+    public function listMailboxes(string $orderId): array;
+    /** @return string provider mailbox id */
+    public function createMailbox(string $orderId, string $localPart, string $password): string;
+    public function deleteMailbox(string $mailboxId): void;
+    public function changeMailboxPassword(string $mailboxId, string $password): void;
+    public function listAliases(string $orderId): array;
+    /** @return string provider alias id */
+    public function createAlias(string $mailboxId, string $localPart): string;
+    public function deleteAlias(string $aliasId): void;
 }

@@ -12,7 +12,7 @@ use App\Core\Settings;
 final class HostingerDriver implements ProviderDriver
 {
     private const DEFAULT_BASE = 'https://developers.hostinger.com';
-    private const FEATURES = ['dns', 'domains', 'websites', 'databases', 'ssl', 'discovery'];
+    private const FEATURES = ['dns', 'domains', 'websites', 'databases', 'ssl', 'email', 'discovery'];
 
     public function __construct(private readonly array $credentials)
     {
@@ -85,6 +85,21 @@ final class HostingerDriver implements ProviderDriver
             $out[] = $this->res('hosting_account', (string) $username, (string) $username, 'active', null, ['order_id' => $orderId]);
             foreach ($this->listDatabases((string) $username) as $db) {
                 $out[] = $this->res('database', $db['name'], $db['name'], 'active', (string) $username, $db);
+            }
+        }
+
+        try {
+            foreach ($this->paginate('/api/mail/v1/orders') as $mo) {
+                $out[] = $this->res('mail_order', (string) $mo['id'], (string) ($mo['domain']['name'] ?? $mo['id']), $mo['status'] ?? null, null, [
+                    'domain' => $mo['domain']['name'] ?? null,
+                    'seats' => $mo['seats'] ?? null,
+                    'plan' => $mo['plan']['name'] ?? null,
+                    'expires_at' => $mo['expires_at'] ?? null,
+                ]);
+            }
+        } catch (ProviderException $e) {
+            if (!in_array($e->httpStatus, [401, 403, 404], true)) {
+                throw $e;
             }
         }
 
@@ -272,6 +287,68 @@ final class HostingerDriver implements ProviderDriver
     public function installSsl(string $account, string $domain): void
     {
         $this->request('POST', '/api/hosting/v1/accounts/' . rawurlencode($account) . '/websites/' . rawurlencode($domain) . '/ssl/setup');
+    }
+
+    // ---- Email -------------------------------------------------------------
+
+    public function listMailboxes(string $orderId): array
+    {
+        $out = [];
+        foreach ($this->paginate('/api/mail/v1/orders/' . rawurlencode($orderId) . '/mailboxes') as $m) {
+            $out[] = [
+                'id' => (string) $m['id'],
+                'address' => strtolower((string) $m['address']),
+                'status' => $m['status'] ?? 'active',
+                'storage_used' => $m['usage']['storage_used'] ?? null,
+                'storage_quota' => $m['usage']['storage_quota'] ?? null,
+            ];
+        }
+        return $out;
+    }
+
+    public function createMailbox(string $orderId, string $localPart, string $password): string
+    {
+        $r = $this->request('POST', '/api/mail/v1/orders/' . rawurlencode($orderId) . '/mailboxes', [], [
+            'local_part' => $localPart,
+            'password' => $password,
+        ]);
+        return (string) ($r['id'] ?? '');
+    }
+
+    public function deleteMailbox(string $mailboxId): void
+    {
+        $this->request('DELETE', '/api/mail/v1/mailboxes/' . rawurlencode($mailboxId));
+    }
+
+    public function changeMailboxPassword(string $mailboxId, string $password): void
+    {
+        $this->request('PATCH', '/api/mail/v1/mailboxes/' . rawurlencode($mailboxId) . '/password', [], ['password' => $password]);
+    }
+
+    public function listAliases(string $orderId): array
+    {
+        $out = [];
+        foreach ($this->paginate('/api/mail/v1/orders/' . rawurlencode($orderId) . '/aliases') as $a) {
+            $out[] = [
+                'id' => (string) $a['id'],
+                'address' => strtolower((string) $a['address']),
+                'mailbox_id' => (string) ($a['mailbox']['id'] ?? ''),
+                'mailbox_address' => strtolower((string) ($a['mailbox']['address'] ?? '')),
+                'is_active' => (bool) ($a['is_active'] ?? true),
+            ];
+        }
+        return $out;
+    }
+
+    public function createAlias(string $mailboxId, string $localPart): string
+    {
+        $r = $this->request('POST', '/api/mail/v1/mailboxes/' . rawurlencode($mailboxId) . '/aliases', [], ['local_part' => $localPart]);
+        return (string) ($r['id'] ?? '');
+    }
+
+    public function deleteAlias(string $aliasId): void
+    {
+        $this->request('DELETE', '/api/mail/v1/aliases/' . rawurlencode($aliasId));
     }
 
     // ---- HTTP --------------------------------------------------------------

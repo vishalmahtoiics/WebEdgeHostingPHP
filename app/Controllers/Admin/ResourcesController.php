@@ -23,7 +23,7 @@ final class ResourcesController extends Controller
         }
         $state = query('state');
         if ($state === 'unclaimed') {
-            $where[] = "r.local_id IS NULL AND r.type IN ('domain','website','database','vps')";
+            $where[] = "r.local_id IS NULL AND r.type IN ('domain','website','database','mail_order','vps')";
         } elseif ($state === 'claimed') {
             $where[] = 'r.local_id IS NOT NULL';
         } elseif ($state === 'missing') {
@@ -44,6 +44,7 @@ final class ResourcesController extends Controller
                         WHEN 'website' THEN (SELECT c.name FROM websites x JOIN customers c ON c.id = x.customer_id WHERE x.id = r.local_id)
                         WHEN 'database' THEN (SELECT c.name FROM hosting_databases x JOIN customers c ON c.id = x.customer_id WHERE x.id = r.local_id)
                         WHEN 'customer' THEN (SELECT c.name FROM customers c WHERE c.id = r.local_id)
+                        WHEN 'email_domain' THEN (SELECT c.name FROM email_domains x JOIN customers c ON c.id = x.customer_id WHERE x.id = r.local_id)
                     END AS customer_name
                  $from WHERE $w ORDER BY r.local_id IS NOT NULL, r.type, r.name",
                 "SELECT COUNT(*) $from WHERE $w",
@@ -58,7 +59,7 @@ final class ResourcesController extends Controller
     public function claim(int $id): string
     {
         $resource = $this->requireFound(DB::one('SELECT type FROM provider_resources WHERE id = ?', [$id]));
-        $needed = ['domain' => 'domains.manage', 'website' => 'websites.manage', 'database' => 'databases.manage'][$resource['type']] ?? 'providers.manage';
+        $needed = ['domain' => 'domains.manage', 'website' => 'websites.manage', 'database' => 'databases.manage', 'mail_order' => 'email.manage'][$resource['type']] ?? 'providers.manage';
         if (!can($needed)) {
             abort(403);
         }
@@ -68,6 +69,13 @@ final class ResourcesController extends Controller
         }
         try {
             [$type, $localId] = ProviderSyncService::claim($id, $customerId, (bool) input('with_related', false));
+            if ($type === 'email_domain') {
+                try {
+                    \App\Services\EmailService::import($localId);
+                } catch (\Throwable $e) {
+                    flash('warning', 'Email domain claimed, but its mailboxes could not be imported yet: ' . $e->getMessage());
+                }
+            }
         } catch (\InvalidArgumentException | \RuntimeException $e) {
             flash('danger', $e->getMessage());
             back('/admin/resources');
@@ -76,6 +84,7 @@ final class ResourcesController extends Controller
             'domain' => "/admin/domains/$localId",
             'website' => "/admin/websites/$localId",
             'database' => "/admin/databases/$localId",
+            'email_domain' => "/admin/email/$localId",
             default => "/admin/customers/$localId",
         };
         $this->success($to, 'Resource claimed' . ($customerId ? ' and assigned.' : '. Assign it to a customer when ready.'));

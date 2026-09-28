@@ -5,7 +5,7 @@ $tools = [
     ['Databases', 'database', can('databases') ? url('/customer/databases/create', ['website_id' => $w['id']]) : null, 'Create and manage MySQL databases', can('databases') && $active],
     ['DNS', 'diagram-3', $domain && can('dns') ? url('/customer/domains/' . $domain['id'] . '/dns') : null, 'Manage DNS records for this domain', (bool) ($domain && can('dns'))],
     ['SSL', 'shield-lock', url('/customer/ssl'), 'Check your SSL certificate', true],
-    ['File manager', 'folder2-open', null, 'Browse, upload and edit files — coming soon', false],
+    ['File manager', 'folder2-open', url('/customer/websites/' . $w['id'] . '/files'), $w['file_access'] !== 'none' ? 'Browse, upload and edit files' : 'Not enabled yet — contact support', can('files') && $active && $w['file_access'] !== 'none'],
 ];
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">

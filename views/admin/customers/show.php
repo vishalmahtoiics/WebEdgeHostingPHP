@@ -159,6 +159,7 @@ $manage = can('customers.manage');
                 ['Websites', 'window', $websites, static fn ($w) => ['/admin/websites/' . $w['id'], $w['domain'], status_badge($w['status'])], '/admin/websites/create?customer_id=' . $c['id'], 'websites.manage'],
                 ['Domains', 'globe2', $domains, static fn ($d) => ['/admin/domains/' . $d['id'], $d['name'], status_badge($d['status'])], '/admin/domains/create?customer_id=' . $c['id'], 'domains.manage'],
                 ['Databases', 'database', $databases, static fn ($d) => ['/admin/databases/' . $d['id'], $d['name'], '<span class="small text-muted">' . e($d['domain'] ?? '') . '</span>'], null, null],
+                ['Email', 'envelope', $emailDomains, static fn ($m) => ['/admin/email/' . $m['id'], $m['name'] . ' (' . $m['n'] . ' mailboxes)', status_badge($m['status'])], null, null],
                 ['VPS', 'hdd-rack', $vps, static fn ($v) => [null, $v['name'], status_badge($v['status'])], null, null],
             ];
             foreach ($blocks as [$label, $icon, $items, $row, $addUrl, $perm]): ?>

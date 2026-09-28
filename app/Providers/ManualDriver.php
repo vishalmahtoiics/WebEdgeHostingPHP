@@ -59,4 +59,11 @@ final class ManualDriver implements ProviderDriver
     public function phpMyAdminLink(string $account, string $name): string { $this->unsupported(); }
     public function sslStatus(string $account, string $domain): array { $this->unsupported(); }
     public function installSsl(string $account, string $domain): void { $this->unsupported(); }
+    public function listMailboxes(string $orderId): array { $this->unsupported(); }
+    public function createMailbox(string $orderId, string $localPart, string $password): string { $this->unsupported(); }
+    public function deleteMailbox(string $mailboxId): void { $this->unsupported(); }
+    public function changeMailboxPassword(string $mailboxId, string $password): void { $this->unsupported(); }
+    public function listAliases(string $orderId): array { $this->unsupported(); }
+    public function createAlias(string $mailboxId, string $localPart): string { $this->unsupported(); }
+    public function deleteAlias(string $aliasId): void { $this->unsupported(); }
 }

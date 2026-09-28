@@ -1,7 +1,7 @@
 <?php
 use App\Services\ProviderSyncService;
 
-$canClaim = can('domains.manage') || can('websites.manage') || can('databases.manage');
+$canClaim = can('domains.manage') || can('websites.manage') || can('databases.manage') || can('email.manage');
 ?>
 <p class="text-muted small">Everything the provider accounts can see. Claim a resource to bring it into the panel and assign it to a customer.</p>
 <form class="we-filters row g-2 align-items-end" method="get">
@@ -29,7 +29,7 @@ $canClaim = can('domains.manage') || can('websites.manage') || can('databases.ma
             <tbody>
             <?php foreach ($page['rows'] as $r):
                 $claimable = in_array($r['type'], ProviderSyncService::CLAIMABLE, true);
-                $localUrl = match ($r['local_type']) { 'domain' => '/admin/domains/', 'website' => '/admin/websites/', 'database' => '/admin/databases/', 'customer' => '/admin/customers/', default => null };
+                $localUrl = match ($r['local_type']) { 'domain' => '/admin/domains/', 'website' => '/admin/websites/', 'database' => '/admin/databases/', 'email_domain' => '/admin/email/', 'customer' => '/admin/customers/', default => null };
                 ?>
                 <tr>
                     <td><div class="fw-medium"><?= e($r['name']) ?></div><?php if ($r['parent']): ?><div class="small text-muted"><?= e($r['parent']) ?></div><?php endif; ?></td>
@@ -64,6 +64,8 @@ $canClaim = can('domains.manage') || can('websites.manage') || can('databases.ma
                                         <?php if ($r['type'] === 'website'): ?>
                                             <div class="form-check"><input class="form-check-input" type="checkbox" name="with_related" value="1" id="rel-<?= (int) $r['id'] ?>" checked>
                                                 <label class="form-check-label" for="rel-<?= (int) $r['id'] ?>">Also claim the matching domain and this website's databases</label></div>
+                                        <?php elseif ($r['type'] === 'mail_order'): ?>
+                                            <p class="small text-muted mb-0">Its mailboxes and aliases are imported into the panel.</p>
                                         <?php elseif ($r['type'] === 'domain'): ?>
                                             <p class="small text-muted mb-0">The live DNS zone is loaded into the panel when the domain is claimed.</p>
                                         <?php endif; ?>

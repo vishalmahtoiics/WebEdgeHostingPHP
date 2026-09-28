@@ -19,7 +19,7 @@ final class ProvidersController extends Controller
             'providers' => DB::all(
                 "SELECT p.*,
                     (SELECT COUNT(*) FROM provider_resources r WHERE r.provider_id = p.id AND r.is_missing = 0) AS resource_count,
-                    (SELECT COUNT(*) FROM provider_resources r WHERE r.provider_id = p.id AND r.is_missing = 0 AND r.local_id IS NULL AND r.type IN ('domain','website','database','vps')) AS unclaimed
+                    (SELECT COUNT(*) FROM provider_resources r WHERE r.provider_id = p.id AND r.is_missing = 0 AND r.local_id IS NULL AND r.type IN ('domain','website','database','mail_order','vps')) AS unclaimed
                  FROM providers p ORDER BY p.label"
             ),
         ]);

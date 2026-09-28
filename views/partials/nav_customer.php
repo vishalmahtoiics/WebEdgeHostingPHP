@@ -8,6 +8,7 @@ $sections = [
         ['Websites', 'window', '/customer/websites', 'websites'],
         ['Domains & DNS', 'globe2', '/customer/domains', 'domains'],
         ['Databases', 'database', '/customer/databases', 'databases'],
+        ['Email', 'envelope', '/customer/email', 'email'],
         ['SSL certificates', 'shield-lock', '/customer/ssl', null],
     ],
     'Billing' => [

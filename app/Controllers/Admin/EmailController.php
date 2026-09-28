@@ -1,0 +1,154 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Controllers\Admin;
+
+use App\Controllers\EmailController as BaseEmailController;
+use App\Core\DB;
+use App\Providers\ProviderException;
+use App\Services\EmailService;
+
+final class EmailController extends BaseEmailController
+{
+    protected function emailDomain(int $id): array
+    {
+        return $this->requireFound(DB::one(
+            'SELECT e.*, c.name AS customer_name, p.label AS provider_label FROM email_domains e
+             LEFT JOIN customers c ON c.id = e.customer_id LEFT JOIN providers p ON p.id = e.provider_id WHERE e.id = ?',
+            [$id]
+        ));
+    }
+
+    protected function isAdmin(): bool
+    {
+        return true;
+    }
+
+    protected function base(): string
+    {
+        return '/admin/email';
+    }
+
+    protected function canEdit(array $domain): bool
+    {
+        return can('email.manage');
+    }
+
+    public function index(): string
+    {
+        $where = ['1 = 1'];
+        $params = [];
+        if (($q = query('q')) !== '') {
+            $where[] = 'e.name LIKE ?';
+            $params[] = $this->like($q);
+        }
+        if (($c = query('customer')) !== '') {
+            $where[] = '(c.name LIKE ? OR c.code = ?)';
+            array_push($params, $this->like($c), $c);
+        }
+        if (in_array($s = query('status'), ['pending', 'active', 'suspended'], true)) {
+            $where[] = 'e.status = ?';
+            $params[] = $s;
+        }
+        $w = implode(' AND ', $where);
+        $from = 'FROM email_domains e LEFT JOIN customers c ON c.id = e.customer_id';
+        return $this->view('admin/email/index', [
+            'title' => 'Email',
+            'page' => paginate(
+                "SELECT e.*, c.name AS customer_name,
+                    (SELECT COUNT(*) FROM mailboxes m WHERE m.email_domain_id = e.id) AS mailbox_count,
+                    (SELECT COUNT(*) FROM email_aliases a WHERE a.email_domain_id = e.id) AS alias_count
+                 $from WHERE $w ORDER BY e.name",
+                "SELECT COUNT(*) $from WHERE $w",
+                $params,
+                30
+            ),
+            'unclaimed' => (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'mail_order' AND local_id IS NULL AND is_missing = 0"),
+        ]);
+    }
+
+    public function create(): string
+    {
+        return $this->view('admin/email/create', ['title' => 'Add email domain', 'customers' => customer_options()]);
+    }
+
+    public function store(): string
+    {
+        try {
+            $id = EmailService::createDomain(input_str('name'), (int) input('customer_id', 0) ?: null);
+        } catch (\InvalidArgumentException $e) {
+            $this->failed('/admin/email/create', [$e->getMessage()]);
+        }
+        $this->success("/admin/email/$id", 'Email domain added. Verify its MX records to activate it.');
+    }
+
+    public function verify(int $id): string
+    {
+        $this->emailDomain($id);
+        [$ok, $note] = EmailService::verify($id);
+        flash($ok ? 'success' : 'warning', ($ok ? 'Verified. ' : 'Verification failed. ') . $note);
+        redirect("/admin/email/$id");
+    }
+
+    public function status(int $id): string
+    {
+        $this->emailDomain($id);
+        try {
+            EmailService::setDomainStatus($id, input_str('status'), mb_substr(input_str('reason'), 0, 255));
+        } catch (\InvalidArgumentException $e) {
+            $this->failed("/admin/email/$id", [$e->getMessage()]);
+        }
+        $this->success("/admin/email/$id", 'Status updated.');
+    }
+
+    public function assign(int $id): string
+    {
+        $this->emailDomain($id);
+        $customerId = (int) input('customer_id', 0) ?: null;
+        if ($customerId && !DB::value("SELECT id FROM customers WHERE id = ? AND status <> 'closed'", [$customerId])) {
+            $this->failed("/admin/email/$id", ['Choose a valid customer.']);
+        }
+        EmailService::assignDomain($id, $customerId);
+        $this->success("/admin/email/$id", $customerId ? 'Email domain assigned. Its mailboxes and aliases moved with it.' : 'Unassigned.');
+    }
+
+    public function import(int $id): string
+    {
+        $this->emailDomain($id);
+        try {
+            $c = EmailService::import($id);
+        } catch (ProviderException | \RuntimeException $e) {
+            $this->failed("/admin/email/$id", [$e->getMessage()]);
+        }
+        $this->success("/admin/email/$id", "Refreshed from the mail service: {$c['mailboxes']} new mailbox(es), {$c['aliases']} new alias(es).");
+    }
+
+    public function destroy(int $id): string
+    {
+        $d = $this->emailDomain($id);
+        try {
+            EmailService::deleteDomain($id);
+        } catch (\RuntimeException $e) {
+            $this->failed("/admin/email/$id", [$e->getMessage()]);
+        }
+        $this->success('/admin/email', "Email domain {$d['name']} removed.");
+    }
+
+    public function unsuspendMailbox(int $id, int $mid): string
+    {
+        $this->mailboxIn($id, $mid);
+        EmailService::unsuspendMailbox($mid);
+        $this->success("/admin/email/$id", 'Suspension lifted. The owner can enable the mailbox by setting a new password.');
+    }
+
+    /** Email routing trace for any address. */
+    public function routing(): string
+    {
+        $address = query('address');
+        return $this->view('admin/email/routing', [
+            'title' => 'Email routing',
+            'address' => $address,
+            'trace' => $address !== '' ? EmailService::trace($address) : null,
+        ]);
+    }
+}

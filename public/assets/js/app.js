@@ -5,7 +5,7 @@
     // Confirm destructive actions: <form data-confirm="Are you sure?">
     document.addEventListener('submit', function (e) {
         var form = e.target;
-        var msg = form.getAttribute('data-confirm');
+        var msg = (e.submitter && e.submitter.getAttribute('data-confirm')) || form.getAttribute('data-confirm');
         if (msg && !window.confirm(msg)) {
             e.preventDefault();
             return;
@@ -116,6 +116,27 @@
             el.textContent = hidden ? el.getAttribute('data-secret') : '••••••••••••';
             el.setAttribute('data-hidden', hidden ? 'false' : 'true');
             btn.querySelector('i').className = hidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    });
+
+
+    // Row-action modals: the button that opens a modal can set the form action
+    // (data-action), input values (data-set-<name>) and labels (data-text-<key>).
+    document.addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        if (!btn || !btn.dataset) return;
+        var form = e.target.querySelector('form') || (e.target.querySelector('.modal-content') && e.target.querySelector('.modal-content').tagName === 'FORM' ? e.target.querySelector('.modal-content') : null);
+        if (form && btn.dataset.action) form.setAttribute('action', btn.dataset.action);
+        Object.keys(btn.dataset).forEach(function (k) {
+            var v = btn.dataset[k];
+            if (k.indexOf('set') === 0 && k.length > 3) {
+                var name = k.slice(3).replace(/[A-Z]/g, function (c) { return '_' + c.toLowerCase(); }).replace(/^_/, '');
+                var input = e.target.querySelector('[name="' + name + '"]');
+                if (input) input.value = v;
+            } else if (k.indexOf('text') === 0 && k.length > 4) {
+                var key = k.slice(4).toLowerCase();
+                e.target.querySelectorAll('[data-text="' + key + '"]').forEach(function (el) { el.textContent = v; });
+            }
         });
     });
 

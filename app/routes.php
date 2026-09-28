@@ -106,6 +106,44 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
     $r->post('/ssl/check', [Admin\SslController::class, 'check'], ['perm' => 'domains.view']);
     $r->post('/ssl/check-all', [Admin\SslController::class, 'checkAll'], ['perm' => 'domains.view']);
 
+    // Email
+    $r->group('/email', ['perm' => 'email.view'], static function ($r): void {
+        $r->get('', [Admin\EmailController::class, 'index']);
+        $r->get('/routing', [Admin\EmailController::class, 'routing']);
+        $r->get('/{id}', [Admin\EmailController::class, 'show']);
+    });
+    $r->group('/email', ['perm' => 'email.manage'], static function ($r): void {
+        $r->form('/create', [Admin\EmailController::class, 'create'], [Admin\EmailController::class, 'store']);
+        $r->post('/{id}/verify', [Admin\EmailController::class, 'verify']);
+        $r->post('/{id}/status', [Admin\EmailController::class, 'status']);
+        $r->post('/{id}/assign', [Admin\EmailController::class, 'assign']);
+        $r->post('/{id}/import', [Admin\EmailController::class, 'import']);
+        $r->post('/{id}/delete', [Admin\EmailController::class, 'destroy']);
+        $r->post('/{id}/mailboxes', [Admin\EmailController::class, 'storeMailbox']);
+        $r->post('/{id}/mailboxes/{mid}', [Admin\EmailController::class, 'updateMailbox']);
+        $r->post('/{id}/mailboxes/{mid}/password', [Admin\EmailController::class, 'mailboxPassword']);
+        $r->post('/{id}/mailboxes/{mid}/disable', [Admin\EmailController::class, 'disableMailbox']);
+        $r->post('/{id}/mailboxes/{mid}/unsuspend', [Admin\EmailController::class, 'unsuspendMailbox']);
+        $r->post('/{id}/mailboxes/{mid}/delete', [Admin\EmailController::class, 'deleteMailbox']);
+        $r->post('/{id}/aliases', [Admin\EmailController::class, 'storeAlias']);
+        $r->post('/{id}/aliases/{aid}', [Admin\EmailController::class, 'updateAlias']);
+        $r->post('/{id}/aliases/{aid}/delete', [Admin\EmailController::class, 'deleteAlias']);
+    });
+
+    // File manager
+    $r->post('/websites/{id}/file-access', [Admin\FilesController::class, 'access'], ['perm' => 'websites.manage']);
+    $r->group('/websites/{id}/files', ['perm' => 'files.manage'], static function ($r): void {
+        $r->get('', [Admin\FilesController::class, 'index']);
+        $r->get('/download', [Admin\FilesController::class, 'download']);
+        $r->get('/edit', [Admin\FilesController::class, 'edit']);
+        $r->post('/save', [Admin\FilesController::class, 'save']);
+        $r->post('/create', [Admin\FilesController::class, 'create']);
+        $r->post('/upload', [Admin\FilesController::class, 'upload']);
+        $r->post('/rename', [Admin\FilesController::class, 'rename']);
+        $r->post('/transfer', [Admin\FilesController::class, 'transfer']);
+        $r->post('/delete', [Admin\FilesController::class, 'delete']);
+    });
+
     $r->group('/plans', ['perm' => 'plans.view'], static function ($r): void {
         $r->get('', [Admin\PlansController::class, 'index']);
         $r->get('/{id}', [Admin\PlansController::class, 'show']);
@@ -212,6 +250,30 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
     });
     $r->get('/ssl', [Customer\HostingController::class, 'ssl']);
     $r->post('/ssl/check', [Customer\HostingController::class, 'sslCheck']);
+
+    $r->group('/email', ['perm' => 'email'], static function ($r): void {
+        $r->get('', [Customer\EmailController::class, 'index']);
+        $r->get('/{id}', [Customer\EmailController::class, 'show']);
+        $r->post('/{id}/mailboxes', [Customer\EmailController::class, 'storeMailbox']);
+        $r->post('/{id}/mailboxes/{mid}', [Customer\EmailController::class, 'updateMailbox']);
+        $r->post('/{id}/mailboxes/{mid}/password', [Customer\EmailController::class, 'mailboxPassword']);
+        $r->post('/{id}/mailboxes/{mid}/disable', [Customer\EmailController::class, 'disableMailbox']);
+        $r->post('/{id}/mailboxes/{mid}/delete', [Customer\EmailController::class, 'deleteMailbox']);
+        $r->post('/{id}/aliases', [Customer\EmailController::class, 'storeAlias']);
+        $r->post('/{id}/aliases/{aid}', [Customer\EmailController::class, 'updateAlias']);
+        $r->post('/{id}/aliases/{aid}/delete', [Customer\EmailController::class, 'deleteAlias']);
+    });
+    $r->group('/websites/{id}/files', ['perm' => 'files'], static function ($r): void {
+        $r->get('', [Customer\FilesController::class, 'index']);
+        $r->get('/download', [Customer\FilesController::class, 'download']);
+        $r->get('/edit', [Customer\FilesController::class, 'edit']);
+        $r->post('/save', [Customer\FilesController::class, 'save']);
+        $r->post('/create', [Customer\FilesController::class, 'create']);
+        $r->post('/upload', [Customer\FilesController::class, 'upload']);
+        $r->post('/rename', [Customer\FilesController::class, 'rename']);
+        $r->post('/transfer', [Customer\FilesController::class, 'transfer']);
+        $r->post('/delete', [Customer\FilesController::class, 'delete']);
+    });
 
     $r->get('/notifications', [Customer\NotificationsController::class, 'index']);
     $r->post('/notifications/read', [Customer\NotificationsController::class, 'markRead']);

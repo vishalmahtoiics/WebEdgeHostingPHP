@@ -10,7 +10,7 @@ The platform is being built in three phases.
 |---|---|---|
 | **1. Core platform** | Admin & customer panels, authentication, customers, customer users, roles & permissions, plans, subscriptions, renewals, GST invoices, credit notes, payments, notifications, activity & security logs, white-label settings, search & filters, responsive UI | ✅ Done |
 | **2. Hosting** | Provider accounts (Hostinger API), resource discovery & claiming, domains, DNS, websites, databases, SSL | ✅ Done |
-| **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ⏳ Next |
+| **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ✅ Done |
 
 ## Requirements
 
@@ -95,8 +95,9 @@ php -S 127.0.0.1:8080 -t public public/index.php
 app/
   Core/          DB, Router, Auth, Session, CSRF, Crypto, Settings, Logger, Migrator, View
   Providers/     ProviderDriver interface, HostingerDriver, ManualDriver, ProviderManager
+  Files/         Filesystem interface, LocalFilesystem, FtpFilesystem, FileManager
   Services/      Invoice, Payment, Subscription, Renewal, GST, Notification, Mailer, PlanLimits,
-                 ProviderSync, Domain, Dns, Website, Database, Ssl
+                 ProviderSync, Domain, Dns, Website, Database, Ssl, Email
   Payments/      Gateway interface + Razorpay scaffold
   Controllers/   Admin/*, Customer/*, Auth
   Support/       Money, BillingCycle, Permissions, SettingsSchema, IndianStates
@@ -134,8 +135,39 @@ bin/migrate.php  Apply migrations
 - phpMyAdmin: by default customers get a one-time sign-on link from the provider, and **its address shows the provider's domain**. For full white-labelling, host phpMyAdmin yourself and set **Settings → Provider → Self-hosted phpMyAdmin URL**.
 - Customers can still see DNS values that point at provider infrastructure, such as Hostinger's MX mail servers. Vanity nameservers and mail hostnames would be needed to hide those.
 
+## Features (Phase 3 — email & files)
+
+**Email**
+- **Email domains:** claim them from discovery (Hostinger mail orders; their mailboxes and aliases are imported) or add them manually. A domain can be verified (MX check against live DNS, falling back to the panel's DNS records), assigned, suspended and refreshed.
+- **Mailboxes:** create, edit (display name, quota), change password, disable, delete. Admins can also **suspend**, which the customer cannot undo.
+  - Hostinger's API has no disable switch, so *disable* locks sign-in by setting an unknown random password. Mail keeps arriving, and setting a new password enables the mailbox again.
+  - Mailbox passwords are never stored or logged.
+- **Plan limits:** the number of mailboxes and aliases, and the quota per mailbox, come from the customer's plan.
+- **Aliases:** an alias can point to a mailbox or to another alias (`hello@ → support@ → mailbox`).
+  - Chains are resolved to the final mailbox when published to the provider.
+  - Loops, self-references, missing targets and cross-domain destinations are rejected.
+  - Retargeting an alias republishes every alias that depends on it.
+  - Mailboxes and aliases that others depend on cannot be deleted.
+- **Email routing:** trace any address to see each alias hop, the final mailbox and the status of each. Admins can trace any address; customers only addresses on their own domains.
+- **Settings → Provider:** expected MX hosts, plus the webmail/IMAP/SMTP details shown to customers.
+
+**File manager & code editor**
+- **Setup:** each website's file access is configured on its admin page.
+  - **Same hosting account (direct):** for websites on the same Hostinger hosting account as the panel, which is the usual setup. The folder is prefilled from the provider sync (`/home/uXXX/domains/site/public_html`).
+  - **FTP / FTPS:** for websites anywhere else. Credentials are stored encrypted.
+- **Operations:** browse, breadcrumbs, upload (multiple files), download, create file or folder, rename, move, copy, delete (folders recursively), and name search.
+- **Code editor:** CodeMirror, bundled locally, with PHP, HTML, CSS, JavaScript, JSON, XML, TXT, `.htaccess` and more. It has syntax highlighting, bracket and tag matching, Ctrl+S to save, Ctrl+F to search, and a warning about unsaved changes.
+- **Security:**
+  - Every path is normalised, and `..` is rejected.
+  - Local paths are resolved with `realpath()` and must stay inside the website folder, so symlinks cannot escape it.
+  - The panel's own folder, or any folder that contains it, can never be opened.
+  - Binary and very large files are download-only.
+  - Every change is written to the activity log.
+- **Access:** customers need the *File manager* permission and an active website. Admins need `files.manage`.
+
 ## Hostinger API notes
 
 - The integration is built against Hostinger's official OpenAPI spec (v1.55, `github.com/hostinger/api`). During development it was tested against a mock server that follows the same request and response shapes, **not against a live Hostinger account**. Test with your own token before you rely on it.
 - Website creation is asynchronous at Hostinger. The first website on a new plan needs a datacenter code.
-- **Phase 3:** Hostinger's API has mailbox, alias and forwarder endpoints (`/api/mail/v1`), which will be used for email. Its file API is read-only, so the file manager and code editor will connect to each website over SFTP.
+- Email uses the same API token (`/api/mail/v1`: mail orders, mailboxes, aliases).
+- Hostinger's file API is read-only, so the file manager uses direct disk access (same hosting account) or FTP/FTPS instead.

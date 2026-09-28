@@ -47,6 +47,37 @@ $apiLinked = $w['provider_id'] && $w['external_username'] && ($w['driver'] ?? 'm
             </div>
         </div>
         <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>File manager access</span>
+                <?php if ($w['file_access'] !== 'none' && can('files.manage')): ?><a class="btn btn-sm btn-primary" href="<?= e(url('/admin/websites/' . $w['id'] . '/files')) ?>"><i class="bi bi-folder2-open me-1"></i>Open file manager</a><?php endif; ?>
+            </div>
+            <div class="card-body">
+                <?php if ($manage): ?>
+                <form method="post" action="<?= e(url('/admin/websites/' . $w['id'] . '/file-access')) ?>" autocomplete="off">
+                    <?= csrf_field() ?>
+                    <div class="mb-2">
+                        <?php foreach (['none' => 'Disabled', 'local' => 'Same hosting account as the panel (direct)', 'ftp' => 'FTP / FTPS'] as $k => $l): ?>
+                            <div class="form-check"><input class="form-check-input" type="radio" name="file_access" id="fa_<?= $k ?>" value="<?= $k ?>"<?= checked($w['file_access'] === $k) ?>><label class="form-check-label small" for="fa_<?= $k ?>"><?= e($l) ?></label></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <label class="form-label small" for="file_root">Website folder</label>
+                    <input class="form-control form-control-sm mb-2" id="file_root" name="file_root" value="<?= e($w['file_root'] ?: $w['root_directory']) ?>" placeholder="/home/u123/domains/example.com/public_html">
+                    <div class="row g-2 mb-2">
+                        <div class="col-8"><input class="form-control form-control-sm" name="ftp_host" value="<?= e($w['ftp_host']) ?>" placeholder="FTP host" aria-label="FTP host"></div>
+                        <div class="col-4"><input class="form-control form-control-sm" name="ftp_port" value="<?= e($w['ftp_port'] ?: 21) ?>" aria-label="FTP port"></div>
+                        <div class="col-6"><input class="form-control form-control-sm" name="ftp_user" value="<?= e($w['ftp_user']) ?>" placeholder="FTP username" aria-label="FTP username"></div>
+                        <div class="col-6"><input type="password" class="form-control form-control-sm" name="ftp_password" placeholder="<?= $w['ftp_password_enc'] ? '•••••• saved' : 'FTP password' ?>" autocomplete="new-password" aria-label="FTP password"></div>
+                    </div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="ftp_tls" value="1" id="ftp_tls"<?= checked($w['ftp_tls']) ?>><label class="form-check-label small" for="ftp_tls">Use FTPS (TLS)</label></div>
+                    <div class="form-text mb-2">For FTP, the folder is the path on the FTP server (e.g. <code>/public_html</code>). Credentials are stored encrypted. The panel's own folder can never be opened.</div>
+                    <button class="btn btn-sm btn-light">Save & test</button>
+                </form>
+                <?php else: ?>
+                    <div class="small"><?= e(['none' => 'Disabled', 'local' => 'Direct', 'ftp' => 'FTP'][$w['file_access']]) ?></div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center"><span>Databases</span>
                 <?php if (can('databases.manage') && $w['status'] === 'active'): ?><a class="btn btn-sm btn-primary" href="<?= e(url('/admin/databases/create', ['website_id' => $w['id']])) ?>"><i class="bi bi-plus-lg"></i> New database</a><?php endif; ?></div>
             <?php if (!$databases): ?><div class="card-body small text-muted">No databases.</div><?php else: ?>
