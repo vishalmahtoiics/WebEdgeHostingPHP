@@ -62,6 +62,7 @@ final class FilesController extends FileManagerController
                 $fs->list('');
                 if ($fs instanceof \App\Files\FtpFilesystem) {
                     $data['file_root'] = $fs->root();
+                    $note = $fs->resolvedNote();
                 }
             }
             DB::update('websites', $data, 'id = ?', [$id]);
@@ -74,7 +75,7 @@ final class FilesController extends FileManagerController
         }
         $this->success("/admin/websites/$id", match ($data['file_access']) {
             'none' => 'File manager disabled for this website.',
-            'ftp' => 'File access saved and tested successfully. Using folder ' . $data['file_root'] . ' on the FTP server.',
+            'ftp' => 'File access saved and tested successfully. Using folder ' . $data['file_root'] . ' on the FTP server' . (!empty($note) ? " ($note)" : '') . '.',
             default => 'File access saved and tested successfully.',
         });
     }

@@ -13,7 +13,10 @@ final class FtpFilesystem implements Filesystem
     private $conn;
     private string $root;
 
-    public function __construct(string $host, int $port, string $user, string $password, bool $tls, string $root)
+    /** How the configured folder was matched, for the settings screen. */
+    private string $resolvedNote = '';
+
+    public function __construct(string $host, int $port, string $user, string $password, bool $tls, string $root, string $domain = '')
     {
         if (!function_exists('ftp_connect')) {
             throw new FileException('The PHP FTP extension is not enabled on this server. Enable "ftp" in your hosting PHP settings (on Hostinger: Advanced → PHP Configuration → PHP extensions).');
@@ -48,18 +51,25 @@ final class FtpFilesystem implements Filesystem
         }
         ftp_pasv($conn, true);
         $this->conn = $conn;
-        $this->root = $this->resolveRoot($root);
+        $this->root = $this->resolveRoot($root, strtolower(trim($domain)));
     }
 
     /**
-     * FTP accounts start inside the hosting account's home folder, so a full
-     * server path such as /home/u123/domains/site.com/public_html becomes
-     * /domains/site.com/public_html over FTP. Try the path as given, then the
-     * usual equivalents, and use the first folder that exists.
+     * FTP logins do not see full server paths, and hosts differ in where an FTP
+     * account starts:
+     *  - the hosting account's home (Hostinger main account): the site lives in
+     *    /domains/site.com/public_html (a full path /home/u123/... maps there);
+     *  - the website folder itself (an FTP account made for one website): the
+     *    site is the login folder, and there is no public_html inside it.
+     * Try the path as typed, then these equivalents, and use the first that exists.
      */
-    private function resolveRoot(string $root): string
+    private function resolveRoot(string $root, string $domain): string
     {
         $root = '/' . trim($root, '/');
+        $home = @ftp_pwd($this->conn) ?: '/';
+        // Only a "website folder" style entry may be matched to other folders;
+        // any other folder the admin typed is used exactly as entered.
+        $isWebRoot = $root === '/' || (bool) preg_match('#(^|/)public_html$#', $root) || str_starts_with($root, '/home/');
         $candidates = [$root];
         if (preg_match('#^/home/[^/]+(/.*)?$#', $root, $m)) {
             $candidates[] = $m[1] ?? '/';
@@ -67,17 +77,53 @@ final class FtpFilesystem implements Filesystem
         if (preg_match('#(/domains/[^/]+/public_html)(/.*)?$#', $root, $m)) {
             $candidates[] = $m[1] . ($m[2] ?? '');
         }
-        if (preg_match('#^/domains/[^/]+/public_html$#', $root)) {
+        if ($isWebRoot) {
+            if ($domain !== '' && preg_match('/^[a-z0-9.\-]+$/', $domain)) {
+                $candidates[] = "/domains/$domain/public_html";
+            }
             $candidates[] = '/public_html';
         }
-        $home = @ftp_pwd($this->conn) ?: '/';
         foreach (array_unique($candidates) as $c) {
-            if (@ftp_chdir($this->conn, $c)) {
-                @ftp_chdir($this->conn, $home);
-                return $c;
+            if (!@ftp_chdir($this->conn, $c)) {
+                continue;
             }
+            @ftp_chdir($this->conn, $home);
+            // Never open a whole hosting account (it holds every website in /domains).
+            if (in_array('domains', $this->topLevelNames($c), true)) {
+                continue;
+            }
+            $this->resolvedNote = $c === $root ? '' : "matched as $c";
+            return $c;
         }
-        throw new FileException("The folder $root was not found on the FTP server. FTP logins start in \"$home\"; on Hostinger the website folder is usually /domains/yourdomain.com/public_html (or /public_html for a domain-only FTP account).");
+        // An FTP account created for one website opens inside its public_html.
+        $top = $this->topLevelNames($home);
+        if ($isWebRoot && !in_array('domains', $top, true) && !in_array('public_html', $top, true)) {
+            $this->resolvedNote = 'this FTP account opens directly in the website folder';
+            return $home;
+        }
+        $seen = $top ? implode(', ', array_slice($top, 0, 12)) : 'nothing';
+        $hint = in_array('domains', $top, true)
+            ? 'This login sees the whole hosting account; enter the website folder, e.g. /domains/' . ($domain !== '' ? $domain : 'yourdomain.com') . '/public_html.'
+            : 'Enter one of those folders, or / if this FTP account opens in the website folder itself.';
+        throw new FileException("The folder $root was not found on the FTP server. This FTP login starts in \"$home\" and sees: $seen. $hint");
+    }
+
+    /** Names of the folders and files directly inside $dir (best effort). */
+    private function topLevelNames(string $dir): array
+    {
+        $names = @ftp_nlist($this->conn, $dir);
+        if (!is_array($names)) {
+            return [];
+        }
+        $names = array_values(array_filter(array_map(static fn ($n) => basename((string) $n), $names), static fn ($n) => $n !== '.' && $n !== '..' && $n !== ''));
+        sort($names);
+        return $names;
+    }
+
+    /** Explains how the configured folder was matched ('' when used as typed). */
+    public function resolvedNote(): string
+    {
+        return $this->resolvedNote;
     }
 
     /** The folder actually used on the FTP server (after resolving the configured path). */

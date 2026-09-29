@@ -23,7 +23,8 @@ final class FileManager
                 (string) $w['ftp_user'],
                 (string) Crypto::decrypt($w['ftp_password_enc']),
                 (bool) $w['ftp_tls'],
-                (string) ($w['file_root'] ?: '/')
+                (string) ($w['file_root'] ?: '/'),
+                (string) ($w['domain'] ?? '')
             ),
             default => throw new FileException('File access has not been set up for this website yet.'),
         };
