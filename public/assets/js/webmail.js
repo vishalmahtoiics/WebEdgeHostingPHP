@@ -17,6 +17,23 @@
             form.submit();
         });
     });
+    // Highlight selected rows.
+    document.querySelectorAll('#wmBulk .wm-row input[type=checkbox]').forEach(function (c) {
+        c.addEventListener('change', function () { c.closest('.wm-row').classList.toggle('selected', c.checked); });
+    });
+    if (all) {
+        all.addEventListener('change', function () {
+            document.querySelectorAll('#wmBulk .wm-row').forEach(function (r) { r.classList.toggle('selected', all.checked); });
+        });
+    }
+    // "Cc Bcc" link in compose reveals the fields.
+    document.querySelectorAll('[data-show]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+            e.preventDefault();
+            var el = document.getElementById(a.getAttribute('data-show'));
+            if (el) { el.hidden = false; a.remove(); var f = el.querySelector('input'); if (f) f.focus(); }
+        });
+    });
     // Discard link with confirmation.
     document.querySelectorAll('a[data-confirm]').forEach(function (a) {
         a.addEventListener('click', function (e) {

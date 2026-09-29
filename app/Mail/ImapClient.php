@@ -15,6 +15,8 @@ final class ImapClient
     private int $tag = 0;
     private array $caps = [];
 
+    private const SPECIAL_LABELS = ['inbox' => 'Inbox', 'drafts' => 'Drafts', 'sent' => 'Sent', 'junk' => 'Junk', 'trash' => 'Trash', 'archive' => 'Archive'];
+
     public function __construct(string $host, int $port, string $security, int $timeout = 20)
     {
         $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true, 'peer_name' => $host]]);
@@ -91,12 +93,22 @@ final class ImapClient
                 continue;
             }
             $name = (string) ($t[4] ?? '');
+            $delim = (string) ($t[3] ?? '.');
+            $special = self::special($name, $flags);
+            // Many servers (Hostinger among them) keep every folder under "INBOX.":
+            // show "Sent", not "INBOX.Sent", and nested folders by their own name.
+            $path = self::decodeName($name);
+            if ($delim !== '' && stripos($path, 'INBOX' . $delim) === 0) {
+                $path = substr($path, 6);
+            }
+            $segments = $delim !== '' ? explode($delim, $path) : [$path];
             $out[] = [
                 'name' => $name,
-                'label' => self::decodeName($name),
-                'delimiter' => (string) ($t[3] ?? '.'),
+                'label' => self::SPECIAL_LABELS[$special] ?? (string) end($segments),
+                'depth' => $special ? 0 : count($segments) - 1,
+                'delimiter' => $delim,
                 'flags' => $flags,
-                'special' => self::special($name, $flags),
+                'special' => $special,
             ];
         }
         return $out;

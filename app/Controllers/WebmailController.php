@@ -74,7 +74,7 @@ final class WebmailController extends Controller
             return $this->page('webmail/list', [
                 'title' => $this->folderLabel($folders, $folder),
                 'folders' => $folders, 'folder' => $folder, 'rows' => $rows, 'q' => $q,
-                'page' => $page, 'pages' => $pages, 'total' => count($uids),
+                'page' => $page, 'pages' => $pages, 'total' => count($uids), 'perPage' => $size,
                 'special' => $this->specialOf($folders, $folder),
             ]);
         });
@@ -573,7 +573,8 @@ final class WebmailController extends Controller
         }
         $order = ['inbox' => 0, 'drafts' => 1, 'sent' => 2, 'archive' => 3, 'junk' => 4, 'trash' => 5];
         $f = $this->imap->folders();
-        usort($f, static fn ($a, $b) => [$order[$a['special']] ?? 9, strtolower($a['label'])] <=> [$order[$b['special']] ?? 9, strtolower($b['label'])]);
+        // Special folders first in a fixed order; your own folders by full path so sub-folders follow their parent.
+        usort($f, static fn ($a, $b) => [$order[$a['special']] ?? 9, mb_strtolower(ImapClient::decodeName($a['name']))] <=> [$order[$b['special']] ?? 9, mb_strtolower(ImapClient::decodeName($b['name']))]);
         return $this->folderCache = $f;
     }
 

@@ -235,4 +235,12 @@ final class Webmail
         }
         return [$ok, implode('. ', $out) . '.'];
     }
+
+    /** A stable avatar colour (hue) and initial for a person. @return array{0: int, 1: string} */
+    public static function avatar(string $name, string $email): array
+    {
+        $label = trim($name) !== '' ? trim($name, " \t\"'") : $email;
+        $initial = mb_strtoupper(mb_substr((string) preg_replace('/[^\p{L}\p{N}]/u', '', $label), 0, 1)) ?: '?';
+        return [crc32(strtolower($email ?: $label)) % 360, $initial];
+    }
 }

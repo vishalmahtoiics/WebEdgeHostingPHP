@@ -1,5 +1,2 @@
-<div class="card"><div class="card-body text-center py-5">
-    <div class="display-6 mb-2 text-warning"><i class="bi bi-exclamation-triangle"></i></div>
-    <p class="mb-3"><?= e($message) ?></p>
-    <a class="btn btn-primary" href="<?= e(url('/mails/list')) ?>">Back to Inbox</a>
-</div></div>
+<div class="wm-empty"><i class="bi bi-cloud-slash"></i><p class="mb-3 text-body"><?= e($message) ?></p>
+    <a class="wm-textbtn" href="<?= e(url('/mails/list')) ?>"><i class="bi bi-inbox"></i>Back to Inbox</a></div>
