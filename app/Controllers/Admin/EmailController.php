@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controllers\Admin;
 
+use App\Support\DomainScope;
+
 use App\Core\Session;
 use App\Controllers\EmailController as BaseEmailController;
 use App\Core\DB;
@@ -13,11 +15,16 @@ final class EmailController extends BaseEmailController
 {
     protected function emailDomain(int $id): array
     {
-        return $this->requireFound(DB::one(
+        $d = $this->requireFound(DB::one(
             'SELECT e.*, c.name AS customer_name, p.label AS provider_label FROM email_domains e
              LEFT JOIN customers c ON c.id = e.customer_id LEFT JOIN providers p ON p.id = e.provider_id WHERE e.id = ?',
             [$id]
         ));
+        DomainScope::assert($d['name']);
+        if (!can('providers.view')) {
+            $d['provider_label'] = null;
+        }
+        return $d;
     }
 
     protected function isAdmin(): bool
@@ -51,6 +58,9 @@ final class EmailController extends BaseEmailController
             $where[] = 'e.status = ?';
             $params[] = $s;
         }
+        [$scopeSql, $scopeParams] = DomainScope::sql('e.name');
+        $where[] = $scopeSql;
+        array_push($params, ...$scopeParams);
         $w = implode(' AND ', $where);
         $from = 'FROM email_domains e LEFT JOIN customers c ON c.id = e.customer_id';
         return $this->view('admin/email/index', [
@@ -64,7 +74,7 @@ final class EmailController extends BaseEmailController
                 $params,
                 30
             ),
-            'unclaimed' => (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'mail_order' AND local_id IS NULL AND is_missing = 0"),
+            'unclaimed' => can('providers.view') ? (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'mail_order' AND local_id IS NULL AND is_missing = 0") : 0,
         ]);
     }
 
@@ -75,6 +85,9 @@ final class EmailController extends BaseEmailController
 
     public function store(): string
     {
+        if (!DomainScope::allows(strtolower(input_str('name')))) {
+            $this->failed('/admin/email/create', ['You can only add email for domains that are assigned to you.']);
+        }
         try {
             $id = EmailService::createDomain(input_str('name'), (int) input('customer_id', 0) ?: null);
         } catch (\InvalidArgumentException $e) {
@@ -119,7 +132,7 @@ final class EmailController extends BaseEmailController
         try {
             $c = EmailService::import($id);
         } catch (ProviderException | \RuntimeException $e) {
-            $this->failed("/admin/email/$id", [$e->getMessage()]);
+            $this->failed("/admin/email/$id", [($e instanceof ProviderException ? provider_error($e) : $e->getMessage())]);
         }
         $this->success("/admin/email/$id", "Refreshed from the mail service: {$c['mailboxes']} new mailbox(es), {$c['aliases']} new alias(es).");
     }
@@ -146,6 +159,10 @@ final class EmailController extends BaseEmailController
     public function routing(): string
     {
         $address = query('address');
+        if ($address !== '' && !DomainScope::allows(substr((string) strrchr($address, '@'), 1))) {
+            flash('warning', 'You can only trace addresses on domains assigned to you.');
+            $address = '';
+        }
         return $this->view('admin/email/routing', [
             'title' => 'Email routing',
             'address' => $address,
@@ -156,6 +173,10 @@ final class EmailController extends BaseEmailController
     /** Mail server settings used by the webmail for this domain (empty = defaults). Save or test. */
     public function servers(int $id): string
     {
+        // Mail server names reveal the provider: Super Admin only.
+        if (!can('providers.view')) {
+            abort(403);
+        }
         $d = $this->emailDomain($id);
         $data = [];
         $errors = [];

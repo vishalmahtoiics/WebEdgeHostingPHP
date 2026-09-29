@@ -28,7 +28,7 @@ $apiLinked = $w['provider_id'] && $w['external_username'] && ($w['driver'] ?? 'm
             <div class="card-header">Details <span class="small text-muted fw-normal">(admin only)</span></div>
             <div class="card-body">
                 <dl class="row we-dl mb-0 small">
-                    <dt class="col-5">Provider account</dt><dd class="col-7"><?= $w['provider_label'] ? e($w['provider_label']) . ' <span class="text-muted">(' . e(ProviderManager::driverLabel($w['driver'])) . ')</span>' : '—' ?></dd>
+                    <?php if (can('providers.view')): ?><dt class="col-5">Provider account</dt><dd class="col-7"><?= $w['provider_label'] ? e($w['provider_label']) . ' <span class="text-muted">(' . e(ProviderManager::driverLabel($w['driver'])) . ')</span>' : '—' ?></dd><?php endif; ?>
                     <dt class="col-5">Hosting account</dt><dd class="col-7"><?= e($w['external_username'] ?? '—') ?></dd>
                     <dt class="col-5">Order</dt><dd class="col-7"><?= e($w['external_order_id'] ?? '—') ?></dd>
                     <dt class="col-5">Document root</dt><dd class="col-7 text-break"><code><?= e($w['root_directory'] ?? '—') ?></code></dd>

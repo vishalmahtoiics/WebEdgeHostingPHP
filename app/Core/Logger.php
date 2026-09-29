@@ -32,6 +32,9 @@ final class Logger
             'user_agent' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
             'created_at' => now(),
         ]);
+        if ($u && $u['type'] === 'customer' && Settings::bool('notify.customer_activity')) {
+            \App\Services\AdminAlerts::add($u, self::scrub($description));
+        }
     }
 
     public static function security(
@@ -54,6 +57,12 @@ final class Logger
             'user_agent' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
             'created_at' => now(),
         ]);
+        if ($event === 'login' && $status === 'success' && ($userType ?? ($u['type'] ?? null)) === 'customer' && Settings::bool('notify.customer_logins')) {
+            $who = DB::one('SELECT u.*, c.name AS customer_name, c.code AS customer_code FROM users u LEFT JOIN customers c ON c.id = u.customer_id WHERE u.id = ?', [$userId ?? ($u['id'] ?? 0)]);
+            if ($who) {
+                \App\Services\AdminAlerts::add($who, 'Signed in to the customer panel');
+            }
+        }
     }
 
     /**

@@ -59,9 +59,9 @@ final class SettingsSchema
                 ],
             ],
             'email' => [
-                'label' => 'Email delivery', 'icon' => 'envelope',
+                'label' => 'Email (SMTP) & alerts', 'icon' => 'envelope',
                 'fields' => [
-                    'mail.driver' => ['label' => 'Mail driver', 'type' => 'select', 'default' => 'mail', 'options' => ['mail' => 'PHP mail()', 'smtp' => 'SMTP', 'log' => 'Log only (no delivery)']],
+                    'mail.driver' => ['label' => 'How the panel sends email', 'type' => 'select', 'default' => 'mail', 'options' => ['smtp' => 'SMTP (recommended)', 'mail' => 'PHP mail()', 'log' => 'Log only (no delivery)'], 'help' => 'Invoices, notifications and admin alerts use this. With Hostinger email: SMTP host smtp.hostinger.com, port 465, SSL/TLS, username = the full mailbox address (e.g. noreply@yourdomain.com) and its password. Use "Send test email" to check.'],
                     'mail.from_email' => ['label' => 'From email', 'type' => 'email', 'default' => ''],
                     'mail.from_name' => ['label' => 'From name', 'type' => 'text', 'default' => 'WebEdge'],
                     'mail.smtp_host' => ['label' => 'SMTP host', 'type' => 'text', 'default' => ''],
@@ -69,6 +69,9 @@ final class SettingsSchema
                     'mail.smtp_encryption' => ['label' => 'SMTP encryption', 'type' => 'select', 'default' => 'tls', 'options' => ['tls' => 'STARTTLS', 'ssl' => 'SSL/TLS', 'none' => 'None']],
                     'mail.smtp_username' => ['label' => 'SMTP username', 'type' => 'text', 'default' => ''],
                     'mail.smtp_password' => ['label' => 'SMTP password', 'type' => 'secret', 'default' => ''],
+                    'notify.admin_emails' => ['label' => 'Send admin alerts to (comma separated)', 'type' => 'text', 'default' => '', 'help' => 'Leave empty to use the support email from the Contact tab.'],
+                    'notify.customer_activity' => ['label' => 'Email me whenever a customer does something in their panel', 'type' => 'bool', 'default' => '1', 'help' => 'For example: created an email account, changed DNS, changed a password, opened a file. Several actions in one step arrive as one email.'],
+                    'notify.customer_logins' => ['label' => 'Email me when a customer signs in', 'type' => 'bool', 'default' => '1'],
                 ],
             ],
             'billing' => [

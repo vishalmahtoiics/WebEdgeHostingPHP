@@ -25,9 +25,10 @@ final class EmailController extends BaseEmailController
         return '/customer/email';
     }
 
+    /** Customers manage mailboxes on active and not-yet-verified domains; only suspended ones are locked. */
     protected function canEdit(array $domain): bool
     {
-        return $domain['status'] === 'active';
+        return $domain['status'] !== 'suspended';
     }
 
     public function index(): string

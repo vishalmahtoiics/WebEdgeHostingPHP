@@ -40,6 +40,21 @@ $aliasAddresses = array_column($aliases, 'address');
     <div class="alert alert-warning small">Email for this domain is suspended<?= $d['suspend_reason'] ? ': ' . e($d['suspend_reason']) : '' ?>.</div>
 <?php endif; ?>
 
+<?php if (!$isAdmin && $d['status'] === 'pending'): ?>
+    <div class="alert alert-light border small d-flex gap-2"><i class="bi bi-hourglass-split"></i><span>This domain is not verified yet. You can create email accounts now; mail starts arriving once the domain's MX records point to our mail servers.</span></div>
+<?php endif; ?>
+<?php if ($mbLimit && $mbLimit['limit'] !== null):
+    $left = max(0, $mbLimit['limit'] - $mbLimit['used']); ?>
+    <?php if ($isAdmin): ?>
+        <div class="small text-muted mb-2"><i class="bi bi-sliders me-1"></i>Customer can create <?= (int) $mbLimit['limit'] ?> email account<?= $mbLimit['limit'] === 1 ? '' : 's' ?> (<?= !empty($mbLimit['custom']) ? 'set on the customer' : 'from their plan' ?>) · <?= (int) $mbLimit['used'] ?> used</div>
+    <?php elseif ((int) $mbLimit['limit'] === 0): ?>
+        <div class="alert alert-info small d-flex gap-2"><i class="bi bi-info-circle"></i><span>Your plan does not include email accounts yet. Please contact support to add them.</span></div>
+    <?php elseif ($left === 0): ?>
+        <div class="alert alert-warning small d-flex gap-2"><i class="bi bi-exclamation-circle"></i><span>You have used all <strong><?= (int) $mbLimit['limit'] ?></strong> email accounts on your plan. Please contact support if you need more.</span></div>
+    <?php else: ?>
+        <div class="alert alert-info small d-flex gap-2"><i class="bi bi-envelope-plus"></i><span>You can create up to <strong><?= (int) $mbLimit['limit'] ?></strong> email account<?= $mbLimit['limit'] === 1 ? '' : 's' ?> on your plan: <?= (int) $mbLimit['used'] ?> used, <strong><?= $left ?></strong> left.</span></div>
+    <?php endif; ?>
+<?php endif; ?>
 <div class="row g-3">
     <div class="col-xl-8">
         <div class="card mb-3">
@@ -145,7 +160,7 @@ $aliasAddresses = array_column($aliases, 'address');
                 </div>
             </div>
         <?php endif; ?>
-        <?php if ($isAdmin && can('email.manage')): ?>
+        <?php if ($isAdmin && can('email.manage') && can('providers.view')): ?>
             <form method="post" action="<?= e(url($base . '/servers')) ?>" class="card mb-3" autocomplete="off">
                 <?= csrf_field() ?>
                 <div class="card-header">Mail server for webmail <span class="small text-muted fw-normal">(admin only)</span></div>

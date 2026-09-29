@@ -162,6 +162,6 @@ abstract class DnsController extends Controller
 
     private function providerError(ProviderException $e): string
     {
-        return $this->isAdmin() ? $e->getMessage() : $e->publicMessage();
+        return $this->isAdmin() ? provider_error($e) : $e->publicMessage();
     }
 }

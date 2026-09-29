@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
+use App\Support\DomainScope;
 use App\Core\DB;
 use App\Core\Logger;
 use App\Providers\ProviderException;
@@ -37,12 +38,15 @@ final class DomainsController extends Controller
         } elseif (query('assigned') === 'no') {
             $where[] = 'd.customer_id IS NULL';
         }
+        [$scopeSql, $scopeParams] = DomainScope::sql('d.name');
+        $where[] = $scopeSql;
+        array_push($params, ...$scopeParams);
         $w = implode(' AND ', $where);
         $from = 'FROM domains d LEFT JOIN customers c ON c.id = d.customer_id LEFT JOIN ssl_checks s ON s.hostname = d.name';
         return $this->view('admin/domains/index', [
             'title' => 'Domains',
             'page' => paginate("SELECT d.*, c.name AS customer_name, c.code AS customer_code, s.status AS ssl_status $from WHERE $w ORDER BY d.name", "SELECT COUNT(*) $from WHERE $w", $params, 30),
-            'unclaimed' => (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'domain' AND local_id IS NULL AND is_missing = 0"),
+            'unclaimed' => can('providers.view') ? (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'domain' AND local_id IS NULL AND is_missing = 0") : 0,
         ]);
     }
 
@@ -52,18 +56,21 @@ final class DomainsController extends Controller
             'title' => 'Add domain',
             'domain' => null,
             'customers' => customer_options(),
-            'providers' => DB::all("SELECT id, label, driver FROM providers WHERE is_enabled = 1 ORDER BY label"),
+            'providers' => can('providers.view') ? DB::all("SELECT id, label, driver FROM providers WHERE is_enabled = 1 ORDER BY label") : [],
         ]);
     }
 
     public function store(): string
     {
         $expires = input_str('expires_at');
+        if (!DomainScope::allows(strtolower(input_str('name')))) {
+            $this->failed('/admin/domains/create', ['You can only add domains that are assigned to you.']);
+        }
         try {
             $id = DomainService::create([
                 'name' => input_str('name'),
                 'customer_id' => (int) input('customer_id', 0) ?: null,
-                'provider_id' => (int) input('provider_id', 0) ?: null,
+                'provider_id' => can('providers.view') ? ((int) input('provider_id', 0) ?: null) : null,
                 'dns_hosted' => (bool) input('dns_hosted', false),
                 'status' => in_array(input_str('status'), ['active', 'pending'], true) ? input_str('status') : 'active',
                 'expires_at' => valid_date($expires) ? $expires : null,
@@ -82,6 +89,10 @@ final class DomainsController extends Controller
              FROM domains d LEFT JOIN customers c ON c.id = d.customer_id LEFT JOIN providers p ON p.id = d.provider_id WHERE d.id = ?',
             [$id]
         ));
+        DomainScope::assert($d['name']);
+        if (!can('providers.view')) {
+            $d['provider_label'] = null;
+        }
         return $this->view('admin/domains/show', [
             'title' => $d['name'],
             'domain' => $d,
@@ -95,20 +106,21 @@ final class DomainsController extends Controller
 
     public function edit(int $id): string
     {
-        $d = $this->requireFound(DB::one('SELECT * FROM domains WHERE id = ?', [$id]));
+        $d = $this->findDomain($id);
         return $this->view('admin/domains/form', [
             'title' => 'Edit ' . $d['name'],
             'domain' => $d,
             'customers' => [],
-            'providers' => DB::all("SELECT id, label, driver FROM providers ORDER BY label"),
+            'providers' => can('providers.view') ? DB::all("SELECT id, label, driver FROM providers ORDER BY label") : [],
         ]);
     }
 
     public function update(int $id): string
     {
-        $d = $this->requireFound(DB::one('SELECT * FROM domains WHERE id = ?', [$id]));
+        $d = $this->findDomain($id);
         $expires = input_str('expires_at');
-        $providerId = (int) input('provider_id', 0) ?: null;
+        // Only a Super Admin sees and changes the provider account; keep it as is for everyone else.
+        $providerId = can('providers.view') ? ((int) input('provider_id', 0) ?: null) : ($d['provider_id'] ? (int) $d['provider_id'] : null);
         if ($providerId && !DB::value('SELECT id FROM providers WHERE id = ?', [$providerId])) {
             $this->failed("/admin/domains/$id/edit", ['Choose a valid provider account.']);
         }
@@ -125,7 +137,7 @@ final class DomainsController extends Controller
 
     public function assign(int $id): string
     {
-        $this->requireFound(DB::one('SELECT id FROM domains WHERE id = ?', [$id]));
+        $this->findDomain($id);
         $customerId = (int) input('customer_id', 0) ?: null;
         if ($customerId && !DB::value("SELECT id FROM customers WHERE id = ? AND status <> 'closed'", [$customerId])) {
             $this->failed("/admin/domains/$id", ['Choose a valid customer.']);
@@ -136,7 +148,7 @@ final class DomainsController extends Controller
 
     public function status(int $id): string
     {
-        $d = $this->requireFound(DB::one('SELECT * FROM domains WHERE id = ?', [$id]));
+        $d = $this->findDomain($id);
         $status = input_str('status');
         $reason = mb_substr(input_str('reason'), 0, 255);
         if (!in_array($status, ['active', 'pending', 'suspended', 'expired'], true)) {
@@ -153,22 +165,29 @@ final class DomainsController extends Controller
 
     public function refresh(int $id): string
     {
-        $this->requireFound(DB::one('SELECT id FROM domains WHERE id = ?', [$id]));
+        $this->findDomain($id);
         try {
             DomainService::refresh($id);
         } catch (ProviderException $e) {
-            $this->failed("/admin/domains/$id", [$e->getMessage()]);
+            $this->failed("/admin/domains/$id", [provider_error($e)]);
         }
         $this->success("/admin/domains/$id", 'Registrar details refreshed.');
     }
 
     public function destroy(int $id): string
     {
-        $d = $this->requireFound(DB::one('SELECT * FROM domains WHERE id = ?', [$id]));
+        $d = $this->findDomain($id);
         if (input_str('confirm') !== $d['name']) {
             $this->failed("/admin/domains/$id", ['Type the domain name to confirm.']);
         }
         DomainService::delete($id);
         $this->success('/admin/domains', "{$d['name']} removed from the panel. Nothing was changed at the registrar.");
+    }
+
+    private function findDomain(int $id): array
+    {
+        $d = $this->requireFound(DB::one('SELECT * FROM domains WHERE id = ?', [$id]));
+        DomainScope::assert($d['name']);
+        return $d;
     }
 }

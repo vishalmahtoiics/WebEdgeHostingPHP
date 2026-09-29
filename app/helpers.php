@@ -309,3 +309,9 @@ function customer_options(): array
 {
     return App\Core\DB::all("SELECT id, name, code FROM customers WHERE status <> 'closed' ORDER BY name");
 }
+
+/** Provider error text for staff: full details for Super Admins, the neutral customer wording for everyone else. */
+function provider_error(\App\Providers\ProviderException $e): string
+{
+    return can('providers.view') ? $e->getMessage() : $e->publicMessage();
+}

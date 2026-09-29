@@ -14,7 +14,9 @@ final class FilesController extends FileManagerController
 {
     protected function website(int $id): array
     {
-        return $this->requireFound(DB::one('SELECT * FROM websites WHERE id = ?', [$id]));
+        $w = $this->requireFound(DB::one('SELECT * FROM websites WHERE id = ?', [$id]));
+        \App\Support\DomainScope::assert($w['domain']);
+        return $w;
     }
 
     protected function base(int $id): string

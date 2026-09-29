@@ -20,14 +20,14 @@
         <?= partial('partials/empty', ['icon' => 'window', 'message' => 'No websites found']) ?>
     <?php else: ?>
         <div class="table-responsive"><table class="table table-hover table-we">
-            <thead><tr><th>Website</th><th>Source</th><th>Customer</th><th>Provider account</th><th>Databases</th><th>SSL</th><th>Status</th></tr></thead>
+            <thead><tr><th>Website</th><th>Source</th><th>Customer</th><?php if (can('providers.view')): ?><th>Provider account</th><?php endif; ?><th>Databases</th><th>SSL</th><th>Status</th></tr></thead>
             <tbody>
             <?php foreach ($page['rows'] as $w): ?>
                 <tr>
                     <td><a class="fw-medium" href="<?= e(url('/admin/websites/' . $w['id'])) ?>"><?= e($w['domain']) ?></a><?php if ($w['website_type']): ?><div class="small text-muted"><?= e(ucfirst($w['website_type'])) ?></div><?php endif; ?></td>
                     <td><?= partial('partials/source_badge', ['source' => $w['source']]) ?></td>
                     <td class="small"><?= $w['customer_id'] ? '<a href="' . e(url('/admin/customers/' . $w['customer_id'])) . '">' . e($w['customer_name']) . '</a>' : '<span class="badge text-bg-light border">Unassigned</span>' ?></td>
-                    <td class="small"><?= e($w['provider_label'] ?? '—') ?></td>
+                    <?php if (can('providers.view')): ?><td class="small"><?= e($w['provider_label'] ?? '—') ?></td><?php endif; ?>
                     <td class="small"><?= (int) $w['db_count'] ?></td>
                     <td><?= $w['ssl_status'] ? status_badge($w['ssl_status']) : '<span class="small text-muted">—</span>' ?></td>
                     <td><?= status_badge($w['status']) ?></td>

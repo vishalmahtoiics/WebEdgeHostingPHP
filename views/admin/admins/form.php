@@ -1,4 +1,12 @@
-<?php $editing = $admin !== null; ?>
+<?php
+use App\Support\DomainScope;
+
+$editing = $admin !== null;
+$scope = (string) old('domain_scope', $admin['domain_scope'] ?? 'all');
+$assigned = (array) (old('domains', null) ?? ($editing ? DomainScope::forUser((int) $admin['id']) : []));
+$known = array_values(array_unique(array_merge($allDomains, $assigned)));
+sort($known);
+?>
 <div class="row"><div class="col-xl-7">
 <form method="post" action="<?= e(url($editing ? '/admin/admins/' . $admin['id'] . '/edit' : '/admin/admins/create')) ?>" class="card">
     <?= csrf_field() ?>
@@ -25,6 +33,24 @@
                 <option value="active"<?= selected($admin['status'] ?? 'active', 'active') ?>>Active</option>
                 <option value="suspended"<?= selected($admin['status'] ?? '', 'suspended') ?>>Suspended</option>
             </select>
+        </div>
+        <div class="col-12">
+            <label class="form-label d-block">Domain access</label>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="domain_scope" id="ds_all" value="all"<?= checked($scope !== 'selected') ?> data-scope><label class="form-check-label" for="ds_all">All domains</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="domain_scope" id="ds_sel" value="selected"<?= checked($scope === 'selected') ?> data-scope><label class="form-check-label" for="ds_sel">Only selected domains</label></div>
+            <div class="form-text">With "Only selected domains" this person sees and manages only the ticked domains and their subdomains: DNS, websites, databases, email, SSL and files. Super Admins always see everything.</div>
+            <div class="border rounded p-2 mt-2" id="domainPicker"<?= $scope === 'selected' ? '' : ' hidden' ?>>
+                <?php if (!$known): ?>
+                    <div class="small text-muted p-2">No domains in the panel yet.</div>
+                <?php else: ?>
+                    <input class="form-control form-control-sm mb-2" type="search" placeholder="Filter domains…" aria-label="Filter domains" data-filter="#domainList label">
+                    <div id="domainList" class="row row-cols-1 row-cols-sm-2 g-1" style="max-height: 280px; overflow-y: auto">
+                        <?php foreach ($known as $i => $dn): ?>
+                            <label class="col d-flex align-items-center gap-2 small px-2 py-1"><input class="form-check-input mt-0" type="checkbox" name="domains[]" value="<?= e($dn) ?>"<?= checked(in_array($dn, $assigned, true)) ?>><span class="text-truncate"><?= e($dn) ?></span></label>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
     <div class="card-footer bg-white d-flex gap-2">

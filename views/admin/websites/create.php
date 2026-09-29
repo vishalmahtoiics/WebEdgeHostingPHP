@@ -10,9 +10,9 @@
         <div class="col-md-8"><label class="form-label" for="order">Host on</label>
             <select class="form-select" id="order" name="order">
                 <option value="">Record only (hosted elsewhere, no API)</option>
-                <?php foreach ($orders as $o): ?><option value="<?= (int) $o['provider_id'] ?>:<?= e($o['external_id']) ?>"<?= selected(old('order'), $o['provider_id'] . ':' . $o['external_id']) ?>><?= e($o['label']) ?> — <?= e($o['name']) ?> (#<?= e($o['external_id']) ?>)</option><?php endforeach; ?>
+                <?php foreach ($orders as $o): ?><option value="<?= (int) $o['provider_id'] ?>:<?= e($o['external_id']) ?>"<?= selected(old('order'), $o['provider_id'] . ':' . $o['external_id']) ?>><?= can('providers.view') ? e($o['label']) . ' — ' : '' ?><?= e($o['name']) ?> (#<?= e($o['external_id']) ?>)</option><?php endforeach; ?>
             </select>
-            <?php if (!$orders): ?><div class="form-text">No hosting plans discovered yet. Add and sync a <a href="<?= e(url('/admin/providers')) ?>">provider account</a> to create websites through the API.</div><?php endif; ?>
+            <?php if (!$orders): ?><div class="form-text">No hosting plans discovered yet. <?= can('providers.view') ? 'Add and sync a <a href="' . e(url('/admin/providers')) . '">provider account</a> to create websites through the API.' : 'Ask a Super Admin to connect hosting plans.' ?></div><?php endif; ?>
         </div>
         <div class="col-md-4"><label class="form-label" for="datacenter">Datacenter (first site only)</label><input class="form-control" id="datacenter" name="datacenter" value="<?= e(old('datacenter')) ?>" placeholder="e.g. in-bom"></div>
         <div class="col-12"><label class="form-label" for="notes">Internal notes</label><textarea class="form-control" id="notes" name="notes" rows="2"><?= e(old('notes')) ?></textarea></div>

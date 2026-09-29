@@ -251,7 +251,10 @@ final class EmailService
         }
         $quotaMb = self::checkQuota($d, $quotaMb, $enforcePlan);
         if ($enforcePlan && $d['customer_id'] && !PlanLimits::allows((int) $d['customer_id'], 'mailboxes')) {
-            throw new RuntimeException('You have used all the email accounts included in your plan. Upgrade to add more.');
+            $lim = (int) (PlanLimits::summary((int) $d['customer_id'])['mailboxes']['limit'] ?? 0);
+            throw new RuntimeException($lim === 0
+                ? 'Your plan does not include email accounts yet. Please contact support.'
+                : "You can create only $lim email account" . ($lim === 1 ? '' : 's') . ' on your plan, and all are in use. Please contact support if you need more.');
         }
         $externalId = null;
         if ($driver = self::driver($d)) {
@@ -427,7 +430,10 @@ final class EmailService
             throw new InvalidArgumentException("$address already exists as a mailbox or alias.");
         }
         if ($enforcePlan && $d['customer_id'] && !PlanLimits::allows((int) $d['customer_id'], 'aliases')) {
-            throw new RuntimeException('You have used all the email aliases included in your plan.');
+            $lim = (int) (PlanLimits::summary((int) $d['customer_id'])['aliases']['limit'] ?? 0);
+            throw new RuntimeException($lim === 0
+                ? 'Your plan does not include email aliases yet. Please contact support.'
+                : "You can create only $lim email alias" . ($lim === 1 ? '' : 'es') . ' on your plan, and all are in use.');
         }
         $destination = self::checkDestination($d, $address, $destination);
         $mailbox = self::resolve($destination, $address)['mailbox'];

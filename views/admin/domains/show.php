@@ -42,7 +42,7 @@ $manage = can('domains.manage');
             </div>
             <div class="card-body">
                 <dl class="row we-dl mb-0 small">
-                    <dt class="col-5">Provider account</dt><dd class="col-7"><?= $d['provider_label'] ? e($d['provider_label']) . ' <span class="text-muted">(' . e(ProviderManager::driverLabel($d['driver'])) . ')</span>' : '—' ?></dd>
+                    <?php if (can('providers.view')): ?><dt class="col-5">Provider account</dt><dd class="col-7"><?= $d['provider_label'] ? e($d['provider_label']) . ' <span class="text-muted">(' . e(ProviderManager::driverLabel($d['driver'])) . ')</span>' : '—' ?></dd><?php endif; ?>
                     <dt class="col-5">Registrar status</dt><dd class="col-7"><?= $d['registrar_status'] ? status_badge($d['registrar_status']) : '—' ?></dd>
                     <dt class="col-5">Expires</dt><dd class="col-7"><?= e(fmt_date($d['expires_at'])) ?><?= $d['expires_at'] ? ' <span class="text-muted">(' . days_until($d['expires_at']) . ' days)</span>' : '' ?></dd>
                     <dt class="col-5">Nameservers</dt><dd class="col-7"><?= $d['nameservers'] ? nl2br(e($d['nameservers'])) : '—' ?></dd>

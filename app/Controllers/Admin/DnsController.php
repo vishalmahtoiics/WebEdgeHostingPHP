@@ -10,10 +10,12 @@ final class DnsController extends BaseDnsController
 {
     protected function domain(int $id): array
     {
-        return $this->requireFound(DB::one(
+        $d = $this->requireFound(DB::one(
             'SELECT d.*, c.name AS customer_name FROM domains d LEFT JOIN customers c ON c.id = d.customer_id WHERE d.id = ?',
             [$id]
         ));
+        \App\Support\DomainScope::assert($d['name']);
+        return $d;
     }
 
     protected function basePath(int $id): string

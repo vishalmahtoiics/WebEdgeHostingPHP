@@ -25,12 +25,20 @@ final class PlanLimits
     {
         $sub = SubscriptionService::current($customerId);
         $active = $sub && $sub['status'] === 'active';
+        // An admin can set a customer's own email limits; they win over the plan.
+        try {
+            $own = DB::one('SELECT max_mailboxes, max_email_aliases FROM customers WHERE id = ?', [$customerId]) ?? [];
+        } catch (\PDOException) {
+            $own = [];
+        }
         $out = [];
         foreach (self::RESOURCES as $key => $r) {
+            $override = $own[$r['limit']] ?? null;
             $out[$key] = [
                 'label' => $r['label'],
                 'used' => DB::safeCount($r['sql'], [$customerId]),
-                'limit' => $active ? ($sub[$r['limit']] === null ? null : (int) $sub[$r['limit']]) : 0,
+                'limit' => $override !== null ? (int) $override : ($active ? ($sub[$r['limit']] === null ? null : (int) $sub[$r['limit']]) : 0),
+                'custom' => $override !== null,
             ];
         }
         return $out;

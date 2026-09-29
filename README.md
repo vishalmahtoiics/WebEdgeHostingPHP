@@ -167,6 +167,17 @@ bin/migrate.php  Apply migrations
   - Every change is written to the activity log.
 - **Access:** customers need the *File manager* permission and an active website. Admins need `files.manage`.
 
+## Staff access, provider privacy and admin alerts
+
+- **Domain access per staff user:** under **Admin users → edit**, choose *All domains* or *Only selected domains* and tick the domains.
+  - A limited staff member sees and manages only those domains and their subdomains: domains, DNS, websites, databases, email, SSL, the file manager, dashboard counts and customer pages.
+  - Activity entries about other domains are hidden. Direct links to anything else return "not found". They can only add domains, websites or email for their own domains.
+  - Super Admins always see everything.
+- **Provider details are Super Admin only.** This covers provider accounts, discovered resources, the Provider and Webmail settings tabs, provider names on domain/website/email pages, mail server host names and provider activity in the logs. Other staff get the same neutral error messages customers see. Provider permissions can no longer be given through roles.
+- **Email account limits per customer:** on the customer's edit page, set *Email accounts allowed* and *Email aliases allowed*. For example, with 5 the customer can create up to 5 email accounts themselves and sees "You can create up to 5 email accounts on your plan: 3 used, 2 left". Leave the field empty to use the plan's limit. Customers can create email accounts on domains that are not verified yet (only suspended domains are locked).
+- **SMTP for the panel's own emails:** set this under **Settings → Email (SMTP) & alerts**. For Hostinger email: host `smtp.hostinger.com`, port 465, SSL/TLS, the full mailbox address as username. Use *Send test email* to check it.
+- **Admin alerts:** in the same tab, list who receives alerts. The panel emails them whenever a customer does something in their panel (one email per action, or per group of actions done in one step) and, optionally, when a customer signs in. Passwords are never included.
+
 ## Webmail (built in, at /mails)
 
 Customers read and send email at **`https://yourpanel/mails`**. Nothing needs installing: it's part of the panel.

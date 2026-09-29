@@ -10,6 +10,16 @@ $editing = $customer !== null;
             <div class="card-header">Billing profile</div>
             <div class="card-body"><?= partial('partials/billing_profile_fields', ['c' => $customer]) ?></div>
         </div>
+        <div class="card mb-3">
+            <div class="card-header">Email limits</div>
+            <div class="card-body row g-3">
+                <div class="col-sm-6"><label class="form-label" for="max_mailboxes">Email accounts allowed</label>
+                    <input class="form-control" id="max_mailboxes" name="max_mailboxes" inputmode="numeric" value="<?= e(old('max_mailboxes', (string) ($customer['max_mailboxes'] ?? ''))) ?>" placeholder="Use plan limit"></div>
+                <div class="col-sm-6"><label class="form-label" for="max_email_aliases">Email aliases allowed</label>
+                    <input class="form-control" id="max_email_aliases" name="max_email_aliases" inputmode="numeric" value="<?= e(old('max_email_aliases', (string) ($customer['max_email_aliases'] ?? ''))) ?>" placeholder="Use plan limit"></div>
+                <div class="col-12 form-text mt-1">For example 5: the customer can create up to 5 email accounts themselves and sees "5 email accounts on your plan". Leave empty to use their plan's limit. 0 means none.</div>
+            </div>
+        </div>
         <?php if ($editing): ?>
             <div class="card mb-3">
                 <div class="card-header">Internal notes</div>

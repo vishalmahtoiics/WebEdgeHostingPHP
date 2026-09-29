@@ -37,11 +37,17 @@ final class LogsController extends Controller
             $params[] = $this->like($q);
         }
         $this->dateRange($where, $params, 'a.created_at');
+        if (!can('providers.view')) {
+            $where[] = "a.module <> 'providers'";
+        }
         $w = implode(' AND ', $where);
         $from = 'FROM activity_logs a LEFT JOIN customers c ON c.id = a.customer_id';
         return $this->view('admin/logs/activity', [
             'title' => 'Activity logs',
-            'page' => paginate("SELECT a.*, c.name AS customer_name, c.code AS customer_code $from WHERE $w ORDER BY a.id DESC", "SELECT COUNT(*) $from WHERE $w", $params, 50),
+            'page' => (static function (array $page): array {
+                $page['rows'] = \App\Support\DomainScope::visibleActivity($page['rows']);
+                return $page;
+            })(paginate("SELECT a.*, c.name AS customer_name, c.code AS customer_code $from WHERE $w ORDER BY a.id DESC", "SELECT COUNT(*) $from WHERE $w", $params, 50)),
             'modules' => DB::column('SELECT DISTINCT module FROM activity_logs ORDER BY module'),
             'actions' => DB::column('SELECT DISTINCT action FROM activity_logs ORDER BY action'),
         ]);
@@ -68,6 +74,9 @@ final class LogsController extends Controller
             $params[] = $ip;
         }
         $this->dateRange($where, $params, 's.created_at');
+        if (!can('providers.view')) {
+            $where[] = "s.event NOT LIKE 'provider%'";
+        }
         $w = implode(' AND ', $where);
         return $this->view('admin/logs/security', [
             'title' => 'Security logs',

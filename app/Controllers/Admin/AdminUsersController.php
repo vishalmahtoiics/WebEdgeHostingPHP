@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Core\DB;
 use App\Core\Logger;
 use App\Services\CustomerService;
+use App\Support\DomainScope;
 
 final class AdminUsersController extends Controller
 {
@@ -15,13 +16,13 @@ final class AdminUsersController extends Controller
     {
         return $this->view('admin/admins/index', [
             'title' => 'Admin users',
-            'admins' => DB::all("SELECT u.*, r.name AS role_name, r.is_super FROM users u LEFT JOIN roles r ON r.id = u.role_id WHERE u.type = 'admin' ORDER BY u.name"),
+            'admins' => DB::all("SELECT u.*, r.name AS role_name, r.is_super, (SELECT COUNT(*) FROM admin_domain_access x WHERE x.user_id = u.id) AS domain_count FROM users u LEFT JOIN roles r ON r.id = u.role_id WHERE u.type = 'admin' ORDER BY u.name"),
         ]);
     }
 
     public function create(): string
     {
-        return $this->view('admin/admins/form', ['title' => 'New admin user', 'admin' => null, 'roles' => $this->roles()]);
+        return $this->view('admin/admins/form', ['title' => 'New admin user', 'admin' => null, 'roles' => $this->roles(), 'allDomains' => DomainScope::allKnown()]);
     }
 
     public function store(): string
@@ -30,6 +31,9 @@ final class AdminUsersController extends Controller
         $password = (string) ($_POST['password'] ?? '');
         if ($problem = password_problem($password)) {
             $errors[] = $problem;
+        }
+        if (input_str('domain_scope') === 'selected' && !array_filter((array) ($_POST['domains'] ?? []))) {
+            $errors[] = 'Tick at least one domain, or choose "All domains".';
         }
         if ($errors) {
             $this->failed('/admin/admins/create', $errors);
@@ -42,6 +46,7 @@ final class AdminUsersController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $this->saveDomainAccess($id, $data['email']);
         $role = DB::value('SELECT name FROM roles WHERE id = ?', [$data['role_id']]);
         Logger::activity('security', 'admin_create', "Created admin user {$data['email']} ($role)", 'user', $id);
         Logger::security('permission_change', 'info', "Admin user {$data['email']} created with role $role");
@@ -51,7 +56,7 @@ final class AdminUsersController extends Controller
     public function edit(int $id): string
     {
         $admin = $this->findEditable($id);
-        return $this->view('admin/admins/form', ['title' => 'Edit ' . $admin['name'], 'admin' => $admin, 'roles' => $this->roles()]);
+        return $this->view('admin/admins/form', ['title' => 'Edit ' . $admin['name'], 'admin' => $admin, 'roles' => $this->roles(), 'allDomains' => DomainScope::allKnown()]);
     }
 
     public function update(int $id): string
@@ -69,6 +74,9 @@ final class AdminUsersController extends Controller
         if ($id === Auth::id() && $data['status'] !== 'active') {
             $errors[] = 'You cannot suspend your own account.';
         }
+        if (input_str('domain_scope') === 'selected' && !array_filter((array) ($_POST['domains'] ?? []))) {
+            $errors[] = 'Tick at least one domain, or choose "All domains".';
+        }
         if ($errors) {
             $this->failed("/admin/admins/$id/edit", $errors);
         }
@@ -78,6 +86,7 @@ final class AdminUsersController extends Controller
             $update['password_changed_at'] = now();
         }
         DB::update('users', $update, 'id = ?', [$id]);
+        $this->saveDomainAccess($id, $data['email']);
         Logger::activity('security', 'admin_update', "Updated admin user {$data['email']}", 'user', $id);
         if ((int) $admin['role_id'] !== $data['role_id']) {
             $role = DB::value('SELECT name FROM roles WHERE id = ?', [$data['role_id']]);
@@ -115,6 +124,18 @@ final class AdminUsersController extends Controller
             abort(403, 'Only a Super Admin can change a Super Admin account.');
         }
         return $admin;
+    }
+
+    private function saveDomainAccess(int $id, string $email): void
+    {
+        $scope = input_str('domain_scope') === 'selected' ? 'selected' : 'all';
+        $domains = array_map('strval', (array) ($_POST['domains'] ?? []));
+        $before = DomainScope::forUser($id);
+        DomainScope::save($id, $scope, $domains);
+        $after = DomainScope::forUser($id);
+        if ($before !== $after || $scope === 'all' && $before) {
+            Logger::security('permission_change', 'info', "Domain access for admin user $email: " . ($scope === 'all' ? 'all domains' : implode(', ', $after)));
+        }
     }
 
     private function roles(): array

@@ -5,12 +5,13 @@
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover table-we">
-            <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Role</th><th>Domains</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead>
             <tbody>
             <?php foreach ($admins as $a): ?>
                 <tr>
                     <td><div class="fw-medium"><?= e($a['name']) ?><?= (int) $a['id'] === App\Core\Auth::id() ? ' <span class="badge text-bg-light border">You</span>' : '' ?></div><div class="small text-muted"><?= e($a['email']) ?></div></td>
                     <td><?= e($a['role_name'] ?? 'No role') ?><?= $a['is_super'] ? ' <i class="bi bi-star-fill text-warning" title="Super Admin"></i>' : '' ?></td>
+                    <td class="small"><?= $a['is_super'] || ($a['domain_scope'] ?? 'all') !== 'selected' ? 'All' : (int) $a['domain_count'] . ' selected' ?></td>
                     <td><?= status_badge($a['status']) ?></td>
                     <td class="small text-muted"><?= e($a['last_login_at'] ? fmt_datetime($a['last_login_at']) . ' · ' . $a['last_login_ip'] : 'Never') ?></td>
                     <td class="text-end text-nowrap">

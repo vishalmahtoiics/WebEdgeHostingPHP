@@ -55,6 +55,22 @@
         if (e.persisted && el) { el.remove(); document.body.classList.remove('we-loading-open'); }
     });
 
+    // Admin user form: show the domain picker for "Only selected domains"; filter long lists.
+    document.querySelectorAll('[data-scope]').forEach(function (r) {
+        r.addEventListener('change', function () {
+            var picker = document.getElementById('domainPicker');
+            if (picker) picker.hidden = !document.getElementById('ds_sel').checked;
+        });
+    });
+    document.querySelectorAll('[data-filter]').forEach(function (input) {
+        input.addEventListener('input', function () {
+            var q = input.value.toLowerCase();
+            document.querySelectorAll(input.getAttribute('data-filter')).forEach(function (el) {
+                el.classList.toggle('d-none', q !== '' && el.textContent.toLowerCase().indexOf(q) === -1);
+            });
+        });
+    });
+
     // Print buttons.
     document.querySelectorAll('[data-print]').forEach(function (btn) {
         btn.addEventListener('click', function () { window.print(); });

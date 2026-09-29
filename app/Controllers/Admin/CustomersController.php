@@ -93,6 +93,7 @@ final class CustomersController extends Controller
         });
         NotificationService::notify($id, 'account', 'Welcome to ' . brand_name(),
             'Your account is ready. Sign in with ' . $ownerEmail . ' to manage your services.', '/customer');
+        $this->saveLimits($id);
         $this->success("/admin/customers/$id", 'Customer created.');
     }
 
@@ -105,14 +106,15 @@ final class CustomersController extends Controller
             'users' => DB::all("SELECT * FROM users WHERE customer_id = ? ORDER BY is_owner DESC, name", [$id]),
             'subscriptions' => DB::all('SELECT s.*, p.name AS plan_name FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.customer_id = ? ORDER BY s.id DESC', [$id]),
             'invoices' => DB::all('SELECT * FROM invoices WHERE customer_id = ? ORDER BY id DESC LIMIT 25', [$id]),
-            'activities' => DB::all('SELECT * FROM activity_logs WHERE customer_id = ? ORDER BY id DESC LIMIT 25', [$id]),
+            'activities' => \App\Support\DomainScope::visibleActivity(DB::all('SELECT * FROM activity_logs WHERE customer_id = ? ORDER BY id DESC LIMIT 25', [$id])),
             'balance' => (int) DB::value("SELECT COALESCE(SUM(total - amount_paid - amount_credited), 0) FROM invoices WHERE customer_id = ? AND status IN ('pending','due','failed')", [$id]),
             'paidTotal' => (int) DB::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = ? AND status = 'paid'", [$id]),
             'current' => SubscriptionService::current($id),
-            'websites' => DB::all('SELECT id, domain, status FROM websites WHERE customer_id = ? ORDER BY domain', [$id]),
-            'domains' => DB::all('SELECT id, name, status, source, expires_at FROM domains WHERE customer_id = ? ORDER BY name', [$id]),
-            'databases' => DB::all('SELECT d.id, d.name, w.domain FROM hosting_databases d LEFT JOIN websites w ON w.id = d.website_id WHERE d.customer_id = ? ORDER BY d.name', [$id]),
-            'emailDomains' => DB::all('SELECT e.id, e.name, e.status, (SELECT COUNT(*) FROM mailboxes m WHERE m.email_domain_id = e.id) AS n FROM email_domains e WHERE e.customer_id = ? ORDER BY e.name', [$id]),
+            // Staff limited to selected domains only see those here too.
+            'websites' => $this->scoped(DB::all('SELECT id, domain, status FROM websites WHERE customer_id = ? ORDER BY domain', [$id]), 'domain'),
+            'domains' => $this->scoped(DB::all('SELECT id, name, status, source, expires_at FROM domains WHERE customer_id = ? ORDER BY name', [$id]), 'name'),
+            'databases' => $this->scoped(DB::all('SELECT d.id, d.name, w.domain FROM hosting_databases d LEFT JOIN websites w ON w.id = d.website_id WHERE d.customer_id = ? ORDER BY d.name', [$id]), 'domain'),
+            'emailDomains' => $this->scoped(DB::all('SELECT e.id, e.name, e.status, (SELECT COUNT(*) FROM mailboxes m WHERE m.email_domain_id = e.id) AS n FROM email_domains e WHERE e.customer_id = ? ORDER BY e.name', [$id]), 'name'),
             'vps' => DB::all("SELECT name, status, meta FROM provider_resources WHERE type = 'vps' AND local_type = 'customer' AND local_id = ?", [$id]),
             'plans' => DB::all("SELECT * FROM plans WHERE status = 'active' ORDER BY sort_order, name"),
         ]);
@@ -132,7 +134,14 @@ final class CustomersController extends Controller
             $this->failed("/admin/customers/$id/edit", $errors);
         }
         $data['notes'] = input_str('notes') ?: null;
+        foreach (['max_mailboxes', 'max_email_aliases'] as $k) {
+            $v = trim(input_str($k));
+            if ($v !== '' && (!ctype_digit($v) || (int) $v > 100000)) {
+                $this->failed("/admin/customers/$id/edit", ['Email limits must be whole numbers (leave empty to use the plan).']);
+            }
+        }
         DB::update('customers', [...$data, 'updated_at' => now()], 'id = ?', [$id]);
+        $this->saveLimits($id);
         $changed = array_keys(array_diff_assoc(array_map('strval', $data), array_map('strval', array_intersect_key($customer, $data))));
         Logger::activity('customers', 'update', "Updated customer {$data['name']}" . ($changed ? ' (' . implode(', ', $changed) . ')' : ''), 'customer', $id, $id);
         $this->success("/admin/customers/$id", 'Customer updated.');
@@ -178,5 +187,31 @@ final class CustomersController extends Controller
         DB::run('DELETE FROM customers WHERE id = ?', [$id]);
         Logger::activity('customers', 'delete', "Deleted customer {$customer['name']} ({$customer['code']})", 'customer', $id);
         $this->success('/admin/customers', 'Customer deleted.');
+    }
+
+    private function scoped(array $rows, string $hostKey): array
+    {
+        return array_values(array_filter($rows, static fn ($r) => \App\Support\DomainScope::allows((string) ($r[$hostKey] ?? ''))));
+    }
+
+    /** Customer's own email limits (empty = use the plan). */
+    private function saveLimits(int $id): void
+    {
+        $data = [];
+        foreach (['max_mailboxes', 'max_email_aliases'] as $k) {
+            if (!array_key_exists($k, $_POST)) {
+                continue;
+            }
+            $v = trim(input_str($k));
+            $data[$k] = ctype_digit($v) ? min(100000, (int) $v) : null;
+        }
+        if ($data) {
+            $old = DB::one('SELECT name, max_mailboxes, max_email_aliases FROM customers WHERE id = ?', [$id]);
+            DB::update('customers', $data, 'id = ?', [$id]);
+            if ((string) $old['max_mailboxes'] !== (string) ($data['max_mailboxes'] ?? $old['max_mailboxes']) || (string) $old['max_email_aliases'] !== (string) ($data['max_email_aliases'] ?? $old['max_email_aliases'])) {
+                $fmt = static fn ($v) => $v === null ? 'plan limit' : (string) $v;
+                Logger::activity('customers', 'limits', "Email limits for {$old['name']}: accounts " . $fmt($data['max_mailboxes'] ?? null) . ', aliases ' . $fmt($data['max_email_aliases'] ?? null), 'customer', $id, $id);
+            }
+        }
     }
 }

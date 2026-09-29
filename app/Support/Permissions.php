@@ -10,7 +10,6 @@ final class Permissions
     {
         return [
             'customers' => ['label' => 'Customers', 'perms' => ['customers.view' => 'View customers', 'customers.manage' => 'Create, edit, suspend & delete customers and their users']],
-            'providers' => ['label' => 'Providers', 'perms' => ['providers.view' => 'View provider accounts', 'providers.manage' => 'Manage provider accounts & credentials']],
             'domains' => ['label' => 'Domains', 'perms' => ['domains.view' => 'View domains', 'domains.manage' => 'Manage & assign domains']],
             'dns' => ['label' => 'DNS', 'perms' => ['dns.view' => 'View DNS records', 'dns.manage' => 'Edit & publish DNS']],
             'websites' => ['label' => 'Websites', 'perms' => ['websites.view' => 'View websites', 'websites.manage' => 'Manage & assign websites']],

@@ -181,7 +181,7 @@ abstract class EmailController extends Controller
         try {
             $fn();
         } catch (ProviderException $e) {
-            $this->failed($this->domainPath($domainId), [$this->isAdmin() ? $e->getMessage() : $e->publicMessage()]);
+            $this->failed($this->domainPath($domainId), [$this->isAdmin() ? provider_error($e) : $e->publicMessage()]);
         } catch (\InvalidArgumentException | \RuntimeException $e) {
             $this->failed($this->domainPath($domainId), [$e->getMessage()]);
         }

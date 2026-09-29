@@ -19,13 +19,16 @@ final class DashboardController extends Controller
             $stats['active_customers'] = (int) DB::value("SELECT COUNT(*) FROM customers WHERE status = 'active'");
         }
         if (can('websites.view')) {
-            $stats['websites'] = DB::safeCount('SELECT COUNT(*) FROM websites');
+            [$sq, $sp] = \App\Support\DomainScope::sql('domain');
+            $stats['websites'] = DB::safeCount("SELECT COUNT(*) FROM websites WHERE $sq", $sp);
         }
         if (can('domains.view')) {
-            $stats['domains'] = DB::safeCount('SELECT COUNT(*) FROM domains');
+            [$sq, $sp] = \App\Support\DomainScope::sql('name');
+            $stats['domains'] = DB::safeCount("SELECT COUNT(*) FROM domains WHERE $sq", $sp);
         }
         if (can('email.view')) {
-            $stats['mailboxes'] = DB::safeCount('SELECT COUNT(*) FROM mailboxes');
+            [$sq, $sp] = \App\Support\DomainScope::sql('e.name');
+            $stats['mailboxes'] = DB::safeCount("SELECT COUNT(*) FROM mailboxes m JOIN email_domains e ON e.id = m.email_domain_id WHERE $sq", $sp);
         }
         if (can('subscriptions.view')) {
             $stats['active_subscriptions'] = (int) DB::value("SELECT COUNT(*) FROM subscriptions WHERE status = 'active'");
@@ -60,7 +63,7 @@ final class DashboardController extends Controller
             'revenueByMonth' => $months,
             'providers' => can('providers.view') ? $this->providerStatus() : null,
             'system' => can('settings.manage') ? $this->systemStatus() : null,
-            'activities' => can('activities.view') ? DB::all('SELECT a.*, c.name AS customer_name FROM activity_logs a LEFT JOIN customers c ON c.id = a.customer_id ORDER BY a.id DESC LIMIT 8') : null,
+            'activities' => can('activities.view') ? \App\Support\DomainScope::visibleActivity(DB::all('SELECT a.*, c.name AS customer_name FROM activity_logs a LEFT JOIN customers c ON c.id = a.customer_id ORDER BY a.id DESC LIMIT 8')) : null,
             'upcoming' => can('subscriptions.view') ? DB::all(
                 "SELECT s.id, s.renewal_date, s.price, c.name AS customer_name, p.name AS plan_name
                  FROM subscriptions s JOIN customers c ON c.id = s.customer_id JOIN plans p ON p.id = s.plan_id

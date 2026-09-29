@@ -184,6 +184,10 @@ final class Auth
         if (!$u) {
             return false;
         }
+        // Provider accounts, credentials and provider names are for Super Admins only.
+        if (str_starts_with($permission, 'providers.')) {
+            return $u['type'] === 'admin' && self::isSuper();
+        }
         if (self::$permissions === null) {
             if ($u['type'] === 'admin') {
                 self::$permissions = self::isSuper()

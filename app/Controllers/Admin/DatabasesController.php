@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
+use App\Support\DomainScope;
 use App\Core\DB;
 use App\Core\Logger;
 use App\Providers\ProviderException;
@@ -23,6 +24,9 @@ final class DatabasesController extends Controller
             $where[] = '(c.name LIKE ? OR c.code = ?)';
             array_push($params, $this->like($c), $c);
         }
+        [$scopeSql, $scopeParams] = DomainScope::sql('w.domain');
+        $where[] = $scopeSql;
+        array_push($params, ...$scopeParams);
         $w = implode(' AND ', $where);
         $from = 'FROM hosting_databases d LEFT JOIN websites w ON w.id = d.website_id LEFT JOIN customers c ON c.id = d.customer_id';
         return $this->view('admin/databases/index', [
@@ -35,7 +39,7 @@ final class DatabasesController extends Controller
     {
         return $this->view('shared/database_create', [
             'title' => 'New database',
-            'websites' => DB::all("SELECT id, domain, external_username FROM websites WHERE status = 'active' ORDER BY domain"),
+            'websites' => array_values(array_filter(DB::all("SELECT id, domain, external_username FROM websites WHERE status = 'active' ORDER BY domain"), static fn ($w) => DomainScope::allows($w['domain']))),
             'selected' => (int) query('website_id'),
             'action' => '/admin/databases/create',
             'cancel' => '/admin/databases',
@@ -45,10 +49,13 @@ final class DatabasesController extends Controller
     public function store(): string
     {
         $websiteId = (int) input('website_id', 0);
+        if (!DomainScope::allows((string) DB::value('SELECT domain FROM websites WHERE id = ?', [$websiteId]))) {
+            $this->failed('/admin/databases/create', ['Choose one of your websites.']);
+        }
         try {
             [$id] = DatabaseService::create($websiteId, input_str('name'), input_str('user'), (string) ($_POST['password'] ?? '') ?: null, false);
         } catch (ProviderException $e) {
-            $this->failed('/admin/databases/create?website_id=' . $websiteId, ['The provider could not create the database: ' . $e->getMessage()]);
+            $this->failed('/admin/databases/create?website_id=' . $websiteId, ['The database could not be created: ' . provider_error($e)]);
         } catch (\InvalidArgumentException | \RuntimeException $e) {
             $this->failed('/admin/databases/create?website_id=' . $websiteId, [$e->getMessage()]);
         }
@@ -75,7 +82,7 @@ final class DatabasesController extends Controller
         try {
             DatabaseService::changePassword($id, (string) ($_POST['password'] ?? '') ?: null);
         } catch (ProviderException $e) {
-            $this->failed("/admin/databases/$id", [$e->getMessage()]);
+            $this->failed("/admin/databases/$id", [provider_error($e)]);
         } catch (\InvalidArgumentException $e) {
             $this->failed("/admin/databases/$id", [$e->getMessage()]);
         }
@@ -91,7 +98,7 @@ final class DatabasesController extends Controller
         try {
             DatabaseService::delete($id);
         } catch (ProviderException $e) {
-            $this->failed("/admin/databases/$id", [$e->getMessage()]);
+            $this->failed("/admin/databases/$id", [provider_error($e)]);
         }
         $this->success('/admin/databases', 'Database deleted.');
     }
@@ -102,7 +109,7 @@ final class DatabasesController extends Controller
         try {
             $url = DatabaseService::phpMyAdminUrl($id);
         } catch (ProviderException | \RuntimeException $e) {
-            $this->failed("/admin/databases/$id", [$e->getMessage()]);
+            $this->failed("/admin/databases/$id", [($e instanceof ProviderException ? provider_error($e) : $e->getMessage())]);
         }
         Logger::activity('databases', 'phpmyadmin', "Opened phpMyAdmin for {$d['name']}", 'database', $id, $d['customer_id'] ? (int) $d['customer_id'] : null);
         redirect($url);
@@ -111,7 +118,9 @@ final class DatabasesController extends Controller
     private function find(int $id): array
     {
         try {
-            return DatabaseService::withWebsite($id);
+            $d = DatabaseService::withWebsite($id);
+            DomainScope::assert($d['website_domain']);
+            return $d;
         } catch (\InvalidArgumentException) {
             abort(404);
         }

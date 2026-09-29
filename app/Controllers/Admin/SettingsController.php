@@ -22,16 +22,26 @@ final class SettingsController extends Controller
         'image/vnd.microsoft.icon' => 'ico',
     ];
 
-    public function index(): string
+    /** Tabs the current admin may see: provider details (provider, webmail servers) are Super Admin only. */
+    private function tabs(): array
     {
         $tabs = SettingsSchema::tabs();
+        if (!can('providers.view')) {
+            unset($tabs['provider'], $tabs['webmail']);
+        }
+        return $tabs;
+    }
+
+    public function index(): string
+    {
+        $tabs = $this->tabs();
         $active = array_key_exists(query('tab'), $tabs) ? query('tab') : 'general';
         return $this->view('admin/settings/index', ['title' => 'Settings', 'tabs' => $tabs, 'active' => $active]);
     }
 
     public function update(): string
     {
-        $tabs = SettingsSchema::tabs();
+        $tabs = $this->tabs();
         $tab = input_str('tab');
         if (!isset($tabs[$tab])) {
             abort(400);

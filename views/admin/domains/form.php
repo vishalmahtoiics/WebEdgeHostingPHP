@@ -12,10 +12,12 @@
                     <?php foreach ($customers as $c): ?><option value="<?= (int) $c['id'] ?>"<?= selected(old('customer_id', query('customer_id')), $c['id']) ?>><?= e($c['name']) ?> (<?= e($c['code']) ?>)</option><?php endforeach; ?>
                 </select></div>
         <?php endif; ?>
+<?php if (can('providers.view')): ?>
         <div class="col-md-7"><label class="form-label" for="provider_id">Provider account (optional)</label>
             <select class="form-select" id="provider_id" name="provider_id"><option value="">— None —</option>
                 <?php foreach ($providers as $p): ?><option value="<?= (int) $p['id'] ?>"<?= selected(old('provider_id', $domain['provider_id'] ?? ''), $p['id']) ?>><?= e($p['label']) ?></option><?php endforeach; ?>
             </select></div>
+<?php endif; ?>
         <div class="col-md-5"><label class="form-label" for="expires_at">Registration expires</label><input type="date" class="form-control" id="expires_at" name="expires_at" value="<?= e(old('expires_at', $domain['expires_at'] ?? '')) ?>"></div>
         <div class="col-12">
             <div class="form-check form-switch">

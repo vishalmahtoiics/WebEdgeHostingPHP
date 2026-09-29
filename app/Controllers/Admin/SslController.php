@@ -22,6 +22,7 @@ final class SslController extends Controller
              ) h LEFT JOIN ssl_checks s ON s.hostname = h.hostname
              ORDER BY FIELD(COALESCE(s.status, 'zz'), 'expired', 'expiring', 'not_available', 'active', 'zz'), s.valid_to, h.hostname"
         );
+        $rows = array_values(array_filter($rows, static fn ($r) => \App\Support\DomainScope::allows($r['hostname'])));
         if (in_array($status, ['active', 'expiring', 'expired', 'not_available', 'unchecked'], true)) {
             $rows = array_values(array_filter($rows, static fn ($r) => ($r['status'] ?? 'unchecked') === $status));
         }
@@ -33,7 +34,7 @@ final class SslController extends Controller
     {
         $host = DomainService::normalize(input_str('hostname'));
         $known = DB::value('SELECT 1 FROM domains WHERE name = ? UNION SELECT 1 FROM websites WHERE domain = ?', [$host, $host]);
-        if (!$known) {
+        if (!$known || !\App\Support\DomainScope::allows($host)) {
             $this->failed('/admin/ssl', ['Only domains and websites in the panel can be checked.']);
         }
         $r = SslService::check($host);

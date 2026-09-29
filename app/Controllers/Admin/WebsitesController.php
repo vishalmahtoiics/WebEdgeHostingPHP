@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
+use App\Support\DomainScope;
 use App\Core\DB;
 use App\Core\Logger;
 use App\Providers\ProviderException;
@@ -32,6 +33,9 @@ final class WebsitesController extends Controller
         if (query('assigned') === 'no') {
             $where[] = 'w.customer_id IS NULL';
         }
+        [$scopeSql, $scopeParams] = DomainScope::sql('w.domain');
+        $where[] = $scopeSql;
+        array_push($params, ...$scopeParams);
         $w = implode(' AND ', $where);
         $from = 'FROM websites w LEFT JOIN customers c ON c.id = w.customer_id LEFT JOIN providers p ON p.id = w.provider_id LEFT JOIN ssl_checks s ON s.hostname = w.domain';
         return $this->view('admin/websites/index', [
@@ -44,7 +48,7 @@ final class WebsitesController extends Controller
                 $params,
                 30
             ),
-            'unclaimed' => (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'website' AND local_id IS NULL AND is_missing = 0"),
+            'unclaimed' => can('providers.view') ? (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'website' AND local_id IS NULL AND is_missing = 0") : 0,
         ]);
     }
 
@@ -74,11 +78,14 @@ final class WebsitesController extends Controller
                 $this->failed('/admin/websites/create', ['Choose a hosting plan from the list.']);
             }
         }
+        if (!DomainScope::allows(strtolower(input_str('domain')))) {
+            $this->failed('/admin/websites/create', ['You can only add websites for domains that are assigned to you.']);
+        }
         $datacenter = preg_match('/^[a-z0-9\-]{0,40}$/', $dc = input_str('datacenter')) ? $dc : '';
         try {
             $id = WebsiteService::create(input_str('domain'), $customerId, $providerId, $orderId, $datacenter ?: null, input_str('notes') ?: null);
         } catch (ProviderException $e) {
-            $this->failed('/admin/websites/create', ['The provider refused to create the website: ' . $e->getMessage()]);
+            $this->failed('/admin/websites/create', ['The website could not be created: ' . provider_error($e)]);
         } catch (\InvalidArgumentException $e) {
             $this->failed('/admin/websites/create', [$e->getMessage()]);
         }
@@ -93,6 +100,10 @@ final class WebsitesController extends Controller
              FROM websites w LEFT JOIN customers c ON c.id = w.customer_id LEFT JOIN providers p ON p.id = w.provider_id WHERE w.id = ?',
             [$id]
         ));
+        DomainScope::assert($w['domain']);
+        if (!can('providers.view')) {
+            $w['provider_label'] = null;
+        }
         return $this->view('admin/websites/show', [
             'title' => $w['domain'],
             'website' => $w,
@@ -106,7 +117,7 @@ final class WebsitesController extends Controller
 
     public function update(int $id): string
     {
-        $w = $this->requireFound(DB::one('SELECT * FROM websites WHERE id = ?', [$id]));
+        $w = $this->findWebsite($id);
         DB::update('websites', ['notes' => input_str('notes') ?: null, 'updated_at' => now()], 'id = ?', [$id]);
         Logger::activity('websites', 'update', "Updated notes for {$w['domain']}", 'website', $id, $w['customer_id'] ? (int) $w['customer_id'] : null);
         $this->success("/admin/websites/$id", 'Saved.');
@@ -114,7 +125,7 @@ final class WebsitesController extends Controller
 
     public function assign(int $id): string
     {
-        $this->requireFound(DB::one('SELECT id FROM websites WHERE id = ?', [$id]));
+        $this->findWebsite($id);
         $customerId = (int) input('customer_id', 0) ?: null;
         if ($customerId && !DB::value("SELECT id FROM customers WHERE id = ? AND status <> 'closed'", [$customerId])) {
             $this->failed("/admin/websites/$id", ['Choose a valid customer.']);
@@ -126,7 +137,7 @@ final class WebsitesController extends Controller
 
     public function status(int $id): string
     {
-        $this->requireFound(DB::one('SELECT id FROM websites WHERE id = ?', [$id]));
+        $this->findWebsite($id);
         try {
             WebsiteService::setStatus($id, input_str('status'), mb_substr(input_str('reason'), 0, 255));
         } catch (\InvalidArgumentException | \RuntimeException $e) {
@@ -137,36 +148,36 @@ final class WebsitesController extends Controller
 
     public function destroy(int $id): string
     {
-        $w = $this->requireFound(DB::one('SELECT * FROM websites WHERE id = ?', [$id]));
+        $w = $this->findWebsite($id);
         if (input_str('confirm') !== $w['domain']) {
             $this->failed("/admin/websites/$id", ['Type the website domain to confirm.']);
         }
         try {
             WebsiteService::delete($id, (bool) input('delete_at_provider', false));
         } catch (ProviderException $e) {
-            $this->failed("/admin/websites/$id", ['The provider could not delete the website: ' . $e->getMessage()]);
+            $this->failed("/admin/websites/$id", ['The website could not be deleted: ' . provider_error($e)]);
         }
         $this->success('/admin/websites', 'Website deleted.');
     }
 
     public function ssl(int $id): string
     {
-        $this->requireFound(DB::one('SELECT id FROM websites WHERE id = ?', [$id]));
+        $this->findWebsite($id);
         try {
             WebsiteService::installSsl($id);
         } catch (ProviderException | \RuntimeException $e) {
-            $this->failed("/admin/websites/$id", [$e->getMessage()]);
+            $this->failed("/admin/websites/$id", [($e instanceof ProviderException ? provider_error($e) : $e->getMessage())]);
         }
         $this->success("/admin/websites/$id", 'SSL installation requested. It usually completes within a few minutes.');
     }
 
     public function sslStatus(int $id): string
     {
-        $w = $this->requireFound(DB::one('SELECT * FROM websites WHERE id = ?', [$id]));
+        $w = $this->findWebsite($id);
         try {
             $s = ProviderManager::forId($w['provider_id'] ? (int) $w['provider_id'] : null)->sslStatus((string) $w['external_username'], $w['domain']);
         } catch (ProviderException $e) {
-            $this->failed("/admin/websites/$id", [$e->getMessage()]);
+            $this->failed("/admin/websites/$id", [provider_error($e)]);
         }
         DB::run('UPDATE ssl_checks SET provider_status = ? WHERE hostname = ?', [$s['status'], $w['domain']]);
         $this->success("/admin/websites/$id", 'Provider SSL status: ' . ($s['status'] ?? 'unknown')
@@ -184,5 +195,12 @@ final class WebsitesController extends Controller
         if ($u['limit'] !== null && $u['used'] > $u['limit']) {
             flash('warning', "This customer now has {$u['used']} websites; their plan includes {$u['limit']}.");
         }
+    }
+
+    private function findWebsite(int $id): array
+    {
+        $w = $this->requireFound(DB::one('SELECT * FROM websites WHERE id = ?', [$id]));
+        DomainScope::assert($w['domain']);
+        return $w;
     }
 }
