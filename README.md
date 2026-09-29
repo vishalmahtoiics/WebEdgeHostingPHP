@@ -173,14 +173,15 @@ Customers can read and send email in the browser at their own branded address. I
 
 1. In hPanel, go to **Domains → Subdomains** and create `mails` (for example, `mails.webedgesolutions.in`). Note the folder it shows. Then go to **Security → SSL** and install SSL for the subdomain.
 2. In the panel, go to **Webmail** (admin sidebar). Enter the address and that folder, then click **Install webmail**. The mail servers default to Hostinger's (`ssl://imap.hostinger.com:993`, `ssl://smtp.hostinger.com:465`).
-3. That's it. Customers sign in with their full email address and mailbox password. The customer panel gets a **Webmail** link, and email pages show **Open webmail**.
+3. Optional, a second address such as `https://yourdomain.com/mails`: enter it under **Also open webmail at**. The suggested folder is the main site's web folder followed by `/mails`. If this panel runs on that domain, the panel places the folder inside its own `public/` for you. Both addresses use the same webmail, settings and data, and `/mails` without a trailing slash redirects to `/mails/`.
+4. That's it. Customers sign in with their full email address and mailbox password, from any device or network (sessions are not tied to one IP address, so mobile users stay signed in). The customer panel gets a **Webmail** link, and email pages show **Open webmail**.
 
 Features: inbox and folders (Drafts, Sent, Junk, Trash, Archive), compose with attachments, reply and forward, search, contacts, identities and signatures, archiving, spam marking, zip downloads, new-mail notifications, dark mode, and a mobile layout. Users can change their mailbox password under **Settings → Password**. Filters and vacation replies are optional and need ManageSieve on the mail server.
 
 How it's put together:
 - **Where the files live:** Roundcube lives in `storage/webmail/app` and its SQLite database, temp files and logs in `storage/webmail/data`. The panel never serves anything from `storage/`. The subdomain folder only gets two small entry files, an `.htaccess`, the logos and a blank page. Any hPanel placeholder files are renamed to `*.webedge-bak`. **Keep `storage/webmail/` when you upload panel updates.**
 - **Download checks:** the download is checked against a fixed SHA-256 checksum. Roundcube's web installer is removed.
-- **Security settings:** sign-in is rate-limited, sessions are tied to the visitor's IP, and HTTPS is enforced when the address is `https://`.
+- **Security settings:** sign-in is rate-limited, and HTTPS is enforced when the address is `https://`.
 - **Branding:** brand name, colour, logo and favicon come from **Settings → Branding**. Without an uploaded logo, a logo is generated from your brand name and colour. Roundcube's own logo is never shown. Click **Save & repair** after changing branding.
 - **Password changes:** changes from webmail are sent to `/webmail-api/password` with a secret header. The panel checks the current password with the IMAP server, applies its own mailbox password rules, changes it through the provider API and logs it. After 5 wrong current passwords in 15 minutes, further attempts for that mailbox are refused.
 

@@ -3,6 +3,13 @@
 Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # A folder inside public/ requested without its trailing slash (e.g. /mails for
+    # webmail): redirect to the address the visitor typed plus "/", so Apache's own
+    # directory redirect never exposes the internal "/public/" path.
+    RewriteCond %{REQUEST_FILENAME} ^(.*/)([^/]+)$
+    RewriteCond %1public/%2 -d
+    RewriteCond %{THE_REQUEST} ^\S+\s+(/[^?\s]*[^/?\s])[?\s]
+    RewriteRule ^(?!public/)[^/]+$ %1/ [R=301,L,NE]
     RewriteRule ^(?!public/)(.*)$ public/$1 [L]
 </IfModule>
 <FilesMatch "^\.">

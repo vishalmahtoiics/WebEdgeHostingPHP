@@ -14,6 +14,7 @@ $s = $status;
                 <?php if ($s['installed']): ?>
                     <dl class="we-dl small mb-3">
                         <dt>Address</dt><dd><a href="<?= e($s['url']) ?>" target="_blank" rel="noopener"><?= e($s['url']) ?></a></dd>
+                        <?php if ($s['extra_url']): ?><dt>Also at</dt><dd><a href="<?= e($s['extra_url']) ?>/" target="_blank" rel="noopener"><?= e($s['extra_url']) ?></a> <span class="text-muted">(<code><?= e($s['extra_docroot']) ?></code>)</span></dd><?php endif; ?>
                         <dt>Web folder</dt><dd><code><?= e($s['docroot']) ?></code><?= $s['entry_ok'] ? '' : ' <span class="text-danger">(entry files missing — click Save &amp; repair)</span>' ?></dd>
                         <dt>Version</dt><dd>Roundcube <?= e($s['version']) ?></dd>
                         <dt>Mail servers</dt><dd><code><?= e($s['imap_host']) ?></code> · <code><?= e($s['smtp_host']) ?></code></dd>
@@ -34,6 +35,13 @@ $s = $status;
                         <input class="form-control" id="docroot" name="docroot" value="<?= e(old('docroot', $s['docroot'] ?: ($suggestions[0] ?? ''))) ?>" list="docroot-suggestions" placeholder="/home/u123456789/domains/mails.yourdomain.com/public_html" required>
                         <datalist id="docroot-suggestions"><?php foreach ($suggestions as $sg): ?><option value="<?= e($sg) ?>"><?php endforeach; ?></datalist>
                         <div class="form-text">The folder hPanel shows for the subdomain. It must be empty; placeholder files such as <code>default.php</code> are moved aside automatically. The webmail program itself is kept privately inside the panel.</div>
+                    </div>
+                    <div class="mb-3 p-3 rounded bg-body-tertiary">
+                        <label class="form-label" for="extra_url">Also open webmail at <span class="text-muted fw-normal">(optional)</span></label>
+                        <input class="form-control mb-2" id="extra_url" name="extra_url" value="<?= e(old('extra_url', $s['extra_url'])) ?>" placeholder="https://yourdomain.com/mails">
+                        <label class="form-label small" for="extra_docroot">Folder for that address</label>
+                        <input class="form-control form-control-sm" id="extra_docroot" name="extra_docroot" value="<?= e(old('extra_docroot', $s['extra_docroot'] ?: $extraSuggestion)) ?>">
+                        <div class="form-text">The main site's web folder followed by <code>/mails</code>. If this control panel runs on that domain, keep the suggested panel folder; the panel places it correctly. The folder is created if needed. Leave the address empty to turn the second address off.</div>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-md-6"><label class="form-label small" for="imap_host">IMAP server</label><input class="form-control form-control-sm" id="imap_host" name="imap_host" value="<?= e(old('imap_host', $s['imap_host'])) ?>"></div>

@@ -63,6 +63,8 @@ final class WebmailService
             'smtp_host' => (string) Settings::get('webmail.smtp_host', self::DEFAULT_SMTP),
             'filters' => Settings::bool('webmail.filters'),
             'installed_at' => (string) Settings::get('webmail.installed_at', ''),
+            'extra_url' => (string) Settings::get('webmail.extra_url', ''),
+            'extra_docroot' => (string) Settings::get('webmail.extra_docroot', ''),
             'entry_ok' => $docroot !== '' && is_file($docroot . '/index.php') && str_contains((string) @file_get_contents($docroot . '/index.php'), self::MARKER),
         ];
     }
@@ -91,14 +93,15 @@ final class WebmailService
      * Validate the web folder: it must exist, must not be (or contain, or be
      * inside) the panel, and must hold nothing but placeholder or our own files.
      */
-    public static function checkDocroot(string $docroot): string
+    public static function checkDocroot(string $docroot, bool $allowPanelPublicChild = false): string
     {
         $real = realpath($docroot);
         if ($real === false || !is_dir($real)) {
             throw new RuntimeException("The folder $docroot does not exist. Create the subdomain in your hosting panel first, then use the folder it shows.");
         }
         $panel = realpath(BASE_PATH) ?: BASE_PATH;
-        if ($real === $panel || str_starts_with($real . '/', $panel . '/') || str_starts_with($panel . '/', $real . '/')) {
+        $panelPublicChild = $allowPanelPublicChild && dirname($real) === $panel . '/public';
+        if (!$panelPublicChild && ($real === $panel || str_starts_with($real . '/', $panel . '/') || str_starts_with($panel . '/', $real . '/'))) {
             throw new RuntimeException('The webmail folder cannot be the control panel folder, inside it, or a folder that contains it. Use the subdomain\'s own folder.');
         }
         if (substr_count(trim($real, '/'), '/') < 2) {
@@ -130,7 +133,7 @@ final class WebmailService
      * Install (or repair/reconfigure) webmail. Downloads Roundcube only when the
      * pinned version is not already present. Returns a short summary.
      */
-    public static function install(string $url, string $docroot, string $imapHost, string $smtpHost, bool $filters): string
+    public static function install(string $url, string $docroot, string $imapHost, string $smtpHost, bool $filters, string $extraUrl = '', string $extraDocroot = ''): string
     {
         self::requirements();
         $url = rtrim($url, '/');
@@ -143,6 +146,17 @@ final class WebmailService
             }
         }
         $docroot = self::checkDocroot($docroot);
+        $extraUrl = rtrim(trim($extraUrl), '/');
+        $extra = null;
+        if ($extraUrl !== '') {
+            if (!filter_var($extraUrl, FILTER_VALIDATE_URL) || !preg_match('#^https?://[a-z0-9.\-]+(:\d+)?/[a-z0-9_\-]{1,40}$#i', $extraUrl)) {
+                throw new RuntimeException('Enter the second address like https://yourdomain.com/mails (one folder name, no trailing parts).');
+            }
+            $extra = self::prepareExtraDocroot($extraDocroot, (string) basename((string) parse_url($extraUrl, PHP_URL_PATH)));
+            if ($extra === $docroot) {
+                throw new RuntimeException('The second address needs its own folder.');
+            }
+        }
 
         @set_time_limit(600);
         foreach ([self::baseDir(), self::dataDir(), self::dataDir() . '/temp', self::dataDir() . '/logs'] as $d) {
@@ -159,16 +173,70 @@ final class WebmailService
         self::writeConfig($url, $imapHost, $smtpHost, $filters);
         self::initDatabase();
         self::writeEntryFiles($docroot, $url);
+        $previousExtra = (string) Settings::get('webmail.extra_docroot', '');
+        if ($previousExtra !== '' && $previousExtra !== $extra) {
+            self::removeEntryFiles($previousExtra);
+        }
+        if ($extra !== null) {
+            self::writeEntryFiles($extra, $url, false);
+        }
 
         Settings::set('webmail.installed_version', self::VERSION);
         Settings::set('webmail.docroot', $docroot);
+        Settings::set('webmail.extra_url', $extra !== null ? $extraUrl : '');
+        Settings::set('webmail.extra_docroot', $extra ?? '');
         Settings::set('webmail.imap_host', $imapHost);
         Settings::set('webmail.smtp_host', $smtpHost);
         Settings::set('webmail.filters', $filters ? '1' : '0');
         Settings::set('webmail.installed_at', now());
         Settings::set('mail.webmail_url', $url);
-        Logger::activity('settings', 'webmail_install', ($downloaded ? 'Installed' : 'Reconfigured') . " webmail $url (Roundcube " . self::VERSION . ')');
+        Logger::activity('settings', 'webmail_install', ($downloaded ? 'Installed' : 'Reconfigured') . " webmail $url" . ($extra !== null ? " and $extraUrl" : '') . ' (Roundcube ' . self::VERSION . ')');
         return $downloaded ? 'Webmail installed' : 'Webmail settings updated';
+    }
+
+    /**
+     * Folder for the second (path) address, e.g. webedgesolution.in/mails.
+     * When that domain serves this panel, the folder goes inside the panel's
+     * public/ folder (the panel's .htaccess sends every request there);
+     * otherwise it is created inside the other site's web folder.
+     */
+    private static function prepareExtraDocroot(string $folder, string $name): string
+    {
+        if (!preg_match('/^[a-z0-9_\-]{1,40}$/i', $name) || in_array(strtolower($name), ['assets', 'uploads', 'public', 'admin', 'customer', 'login', 'webhooks', 'webmail-api', 'install.php', 'index.php'], true)) {
+            throw new RuntimeException("\"$name\" cannot be used as the webmail folder name.");
+        }
+        $folder = rtrim(trim($folder), '/');
+        if ($folder === '') {
+            throw new RuntimeException('Enter the web folder for the second address (the main site\'s folder followed by /' . $name . ').');
+        }
+        $parent = realpath(dirname($folder));
+        if ($parent === false) {
+            throw new RuntimeException('The folder ' . dirname($folder) . ' does not exist. Enter the main site\'s web folder followed by /' . $name . '.');
+        }
+        $panel = realpath(BASE_PATH) ?: BASE_PATH;
+        $inPanel = $parent === $panel || $parent === $panel . '/public';
+        $target = ($inPanel ? $panel . '/public' : $parent) . '/' . $name;
+        if (!$inPanel && basename($folder) !== $name) {
+            throw new RuntimeException("The folder must end in /$name to match the address.");
+        }
+        if (!is_dir($target) && !@mkdir($target, 0755)) {
+            throw new RuntimeException("Could not create the folder $target.");
+        }
+        return self::checkDocroot($target, $inPanel);
+    }
+
+    /** Remove our entry files from a folder we no longer use (never anything else). */
+    private static function removeEntryFiles(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        foreach (['index.php', 'static.php', '.htaccess', 'blank.html'] as $f) {
+            if (is_file("$dir/$f") && ($f === 'blank.html' || str_contains((string) file_get_contents("$dir/$f"), self::MARKER))) {
+                @unlink("$dir/$f");
+            }
+        }
+        @rmdir($dir);
     }
 
     public static function requirements(): void
@@ -285,8 +353,8 @@ final class WebmailService
             'support_url' => (string) (Settings::get('brand.support_url') ?: ''),
             'skin' => 'elastic',
             'skin_logo' => self::skinLogo($url),
-            'blankpage_url' => '/blank.html',
-            'webedge_favicon' => self::faviconFile(),
+            'blankpage_url' => $url . '/blank.html', // replaced per request below
+            'webedge_favicon' => $url . self::faviconFile(),
             'plugins' => $plugins,
             'temp_dir' => self::dataDir() . '/temp/',
             'log_dir' => self::dataDir() . '/logs/',
@@ -294,7 +362,9 @@ final class WebmailService
             'enable_installer' => false,
             'use_https' => $https,
             'force_https' => $https,
-            'ip_check' => true,
+            // Mobile and many home connections change IP address often; binding
+            // sessions to one IP would sign people out. Logins stay rate-limited.
+            'ip_check' => false,
             'login_rate_limit' => 5,
             'session_lifetime' => 30,
             'session_samesite' => 'Lax',
@@ -319,7 +389,15 @@ final class WebmailService
             'password_http_client' => ['timeout' => 30, 'headers' => ['X-WebEdge-Webmail' => self::apiSecret()]],
             'webedge_primary_color' => (string) (Settings::get('brand.primary_color') ?: '#2563eb'),
         ];
-        $php = "<?php\n// Generated by the WebEdge control panel (Settings → Webmail). Changes here are overwritten.\n\$config = " . var_export($config, true) . ";\n";
+        $php = "<?php\n// Generated by the WebEdge control panel (Settings → Webmail). Changes here are overwritten.\n\$config = " . var_export($config, true) . ";\n"
+            // Webmail can be opened at several addresses (mails.example.com/ and example.com/mails/):
+            // point the empty reading pane at the blank page of the address in use.
+            // (A full URL: Roundcube resolves bare paths inside its skin folder.)
+            . "\$__h = (string) (\$_SERVER['HTTP_HOST'] ?? '');\n"
+            . "if (preg_match('/^[a-z0-9.\\-]+(:\\d{1,5})?\$/i', \$__h)) {\n"
+            . "    \$__s = (!empty(\$_SERVER['HTTPS']) && \$_SERVER['HTTPS'] !== 'off') || (\$_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' ? 'https' : 'http';\n"
+            . "    \$config['blankpage_url'] = \$__s . '://' . \$__h . preg_replace('#[^/]*\$#', '', (string) parse_url(\$_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH)) . 'blank.html';\n"
+            . "}\n";
         $file = self::appDir() . '/config/config.inc.php';
         if (file_put_contents($file, $php, LOCK_EX) === false) {
             throw new RuntimeException('Could not write the webmail configuration.');
@@ -386,12 +464,17 @@ final class WebmailService
         file_put_contents("$docroot/brand-mark.svg", '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' . $mark(64) . '</svg>');
         file_put_contents("$docroot/brand-logo.svg", $wide('#1f2937'));
         file_put_contents("$docroot/brand-logo-dark.svg", $wide('#f3f4f6'));
-        $logo = self::logoFile();
-        file_put_contents("$docroot/blank.html", '<!DOCTYPE html><html><head><meta charset="UTF-8"><title></title><style>html,body{height:100%;margin:0}body{display:flex;align-items:center;justify-content:center;background:#fff}'
-            . 'img{width:28%;max-width:220px;opacity:.12;filter:grayscale(1)}html.dark-mode body{background:#21292c}</style></head><body><img src="/' . ($logo ?? 'brand-logo.svg') . '" alt=""></body></html>');
     }
 
-    private static function writeEntryFiles(string $docroot, string $url): void
+    /** The empty reading-pane page (a faint brand logo). */
+    private static function writeBlankPage(string $docroot, string $url): void
+    {
+        $logo = self::logoFile() ?? 'brand-logo.svg';
+        file_put_contents("$docroot/blank.html", '<!DOCTYPE html><html><head><meta charset="UTF-8"><title></title><style>html,body{height:100%;margin:0}body{display:flex;align-items:center;justify-content:center;background:#fff}'
+            . 'img{width:28%;max-width:220px;opacity:.12;filter:grayscale(1)}html.dark-mode body{background:#21292c}</style></head><body><img src="' . htmlspecialchars("$url/$logo", ENT_QUOTES) . '" alt=""></body></html>');
+    }
+
+    private static function writeEntryFiles(string $docroot, string $url, bool $primary = true): void
     {
         $app = self::appDir() . '/public_html';
         foreach (['index.php', 'static.php'] as $f) {
@@ -407,27 +490,31 @@ final class WebmailService
                 }
             }
         }
-        foreach (glob("$docroot/brand-logo.*") ?: [] as $old) {
-            @unlink($old);
+        $hasFavicon = false;
+        if ($primary) {
+            foreach (glob("$docroot/brand-logo.*") ?: [] as $old) {
+                @unlink($old);
+            }
+            self::writeBrandAssets($docroot);
+            if ($logo = self::logoFile()) {
+                @copy(BASE_PATH . '/public/' . ltrim((string) Settings::get('brand.logo'), '/'), "$docroot/$logo");
+            }
+            $favicon = (string) Settings::get('brand.favicon', '');
+            $hasFavicon = $favicon !== '' && is_file(BASE_PATH . '/public/' . ltrim($favicon, '/'));
+            if ($hasFavicon) {
+                @copy(BASE_PATH . '/public/' . ltrim($favicon, '/'), "$docroot/favicon.ico");
+            } else {
+                @unlink("$docroot/favicon.ico");
+            }
         }
-        self::writeBrandAssets($docroot);
-        if ($logo = self::logoFile()) {
-            @copy(BASE_PATH . '/public/' . ltrim((string) Settings::get('brand.logo'), '/'), "$docroot/$logo");
-        }
-        $favicon = (string) Settings::get('brand.favicon', '');
-        $hasFavicon = $favicon !== '' && is_file(BASE_PATH . '/public/' . ltrim($favicon, '/'));
-        if ($hasFavicon) {
-            @copy(BASE_PATH . '/public/' . ltrim($favicon, '/'), "$docroot/favicon.ico");
-        } else {
-            @unlink("$docroot/favicon.ico");
-        }
+        self::writeBlankPage($docroot, $url);
         $https = str_starts_with($url, 'https://');
         $htaccess = "# " . self::MARKER . " — generated by the WebEdge control panel.\n"
             . "DirectoryIndex index.php\n"
             . "Options -Indexes\n"
             . "<IfModule mod_rewrite.c>\nRewriteEngine On\n"
             . ($https ? "RewriteCond %{HTTPS} !=on\nRewriteCond %{HTTP:X-Forwarded-Proto} !https\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]\n" : '')
-            . ($hasFavicon ? '' : "RewriteRule ^favicon\\.ico$ brand-mark.svg [L,T=image/svg+xml]\n")
+            . ($primary && !$hasFavicon ? "RewriteRule ^favicon\\.ico$ brand-mark.svg [L,T=image/svg+xml]\n" : '')
             . "RewriteRule (^|/)\\.(?!well-known/) - [F]\n"
             . "RewriteRule \\.webedge-bak$ - [F]\n"
             . "</IfModule>\n"
