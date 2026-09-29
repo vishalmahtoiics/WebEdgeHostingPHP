@@ -13,8 +13,8 @@ $router->get('/', [HomeController::class, 'index']);
 
 // Authentication
 $router->group('', ['auth' => 'guest'], static function ($r): void {
-    $r->form('/login', [AuthController::class, 'customerLoginForm'], [AuthController::class, 'customerLogin']);
-    $r->form('/admin/login', [AuthController::class, 'adminLoginForm'], [AuthController::class, 'adminLogin']);
+    $r->form('/login', [AuthController::class, 'customerLoginForm'], [AuthController::class, 'customerLogin'], ['signed_in_ok' => true]);
+    $r->form('/admin/login', [AuthController::class, 'adminLoginForm'], [AuthController::class, 'adminLogin'], ['signed_in_ok' => true]);
     $r->form('/forgot-password', [AuthController::class, 'forgotForm'], [AuthController::class, 'forgot']);
     $r->form('/reset-password', [AuthController::class, 'resetForm'], [AuthController::class, 'reset']);
 });

@@ -8,6 +8,7 @@ namespace App\Core;
  *   auth  => 'admin' | 'customer' | 'guest'
  *   perm  => permission key required (admin permission or customer module)
  *   csrf  => false only for signed server-to-server callbacks (webhooks)
+ *   signed_in_ok => true lets a guest-only page open while signed in (login forms)
  * Every other POST is CSRF-checked.
  */
 final class Router
@@ -88,12 +89,17 @@ final class Router
             throw new HttpException(419, 'Your form has expired. Please go back, refresh the page and try again.');
         }
         $auth = $opts['auth'] ?? null;
-        if ($auth === 'guest' && Auth::user()) {
+        // Login pages stay reachable while signed in, so another person can sign in on the same browser.
+        if ($auth === 'guest' && Auth::user() && empty($opts['signed_in_ok'])) {
             redirect(Auth::isAdmin() ? '/admin' : '/customer');
         }
         if ($auth === 'admin' || $auth === 'customer') {
             $user = Auth::user();
-            if (!$user || $user['type'] !== $auth) {
+            if ($user && $user['type'] !== $auth) {
+                // Signed in to the other panel: go back to your own dashboard.
+                redirect($user['type'] === 'admin' ? '/admin' : '/customer');
+            }
+            if (!$user) {
                 if ($method === 'GET') {
                     Session::set('intended', $_SERVER['REQUEST_URI'] ?? null);
                 }

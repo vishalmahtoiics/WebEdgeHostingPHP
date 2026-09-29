@@ -43,6 +43,11 @@ final class AuthController extends Controller
         if (is_string($result)) {
             $this->failed($formPath, [$result]);
         }
+        if (Auth::user()) {
+            // Someone else was signed in on this browser: end their session first.
+            Auth::logout();
+            Session::start();
+        }
         Auth::login($result);
         $home = $type === 'admin' ? '/admin' : '/customer';
         $intended = (string) Session::get('intended', '');

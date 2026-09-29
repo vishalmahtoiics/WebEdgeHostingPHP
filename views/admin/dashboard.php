@@ -1,16 +1,28 @@
 <?php
-$cards = [
-    ['Total customers', number_format($stats['customers']), 'people', '', '/admin/customers'],
-    ['Active customers', number_format($stats['active_customers']), 'person-check', 'success', '/admin/customers?status=active'],
-    ['Websites', number_format($stats['websites']), 'window', 'info', null],
-    ['Domains', number_format($stats['domains']), 'globe2', 'info', null],
-    ['Mailboxes', number_format($stats['mailboxes']), 'envelope', 'info', null],
-    ['Active subscriptions', number_format($stats['active_subscriptions']), 'arrow-repeat', 'success', '/admin/subscriptions?status=active'],
-    ['Pending invoices', number_format($stats['pending_invoices']) . ' · ' . money($stats['outstanding']), 'hourglass-split', 'warning', '/admin/invoices?status=open'],
-    ['Revenue this month', money($stats['revenue_month']), 'graph-up-arrow', 'success', '/admin/payments'],
-];
-$max = max(1, ...array_values($revenueByMonth));
+// Each entry: [label, value, icon, tone, link, stat key]. Cards appear only when the role can see that data.
+$cards = array_filter([
+    isset($stats['customers']) ? ['Total customers', number_format($stats['customers']), 'people', '', '/admin/customers'] : null,
+    isset($stats['active_customers']) ? ['Active customers', number_format($stats['active_customers']), 'person-check', 'success', '/admin/customers?status=active'] : null,
+    isset($stats['websites']) ? ['Websites', number_format($stats['websites']), 'window', 'info', '/admin/websites'] : null,
+    isset($stats['domains']) ? ['Domains', number_format($stats['domains']), 'globe2', 'info', '/admin/domains'] : null,
+    isset($stats['mailboxes']) ? ['Mailboxes', number_format($stats['mailboxes']), 'envelope', 'info', '/admin/email'] : null,
+    isset($stats['active_subscriptions']) ? ['Active subscriptions', number_format($stats['active_subscriptions']), 'arrow-repeat', 'success', '/admin/subscriptions?status=active'] : null,
+    isset($stats['pending_invoices']) ? ['Pending invoices', number_format($stats['pending_invoices']) . ' · ' . money($stats['outstanding']), 'hourglass-split', 'warning', '/admin/invoices?status=open'] : null,
+    isset($stats['revenue_month']) ? ['Revenue this month', money($stats['revenue_month']), 'graph-up-arrow', 'success', '/admin/payments'] : null,
+]);
+$max = $revenueByMonth ? max(1, ...array_values($revenueByMonth)) : 1;
+$panels = array_filter([$providers !== null, $upcoming !== null, $activities !== null]);
+$panelCol = count($panels) >= 3 ? 'col-lg-4' : (count($panels) === 2 ? 'col-lg-6' : 'col-12');
 ?>
+<?php if (!$cards && $revenueByMonth === null && $system === null && !$panels): ?>
+    <div class="card"><div class="card-body text-center py-5">
+        <div class="display-6 mb-2"><i class="bi bi-person-badge"></i></div>
+        <h2 class="h5">Welcome, <?= e(\App\Core\Auth::user()['name'] ?? '') ?></h2>
+        <p class="text-muted mb-0">Your role (<?= e($roleName ?? 'no role') ?>) does not include any dashboard sections yet. Use the menu on the left, or ask a Super Admin to add permissions to your role.</p>
+    </div></div>
+<?php endif; ?>
+
+<?php if ($cards): ?>
 <div class="row g-3 mb-4">
     <?php foreach ($cards as [$label, $value, $icon, $tone, $link]): ?>
         <div class="col-6 col-md-4 col-xl-3">
@@ -26,9 +38,12 @@ $max = max(1, ...array_values($revenueByMonth));
         </div>
     <?php endforeach; ?>
 </div>
+<?php endif; ?>
 
+<?php if ($revenueByMonth !== null || $system !== null): ?>
 <div class="row g-3 mb-4">
-    <div class="col-lg-8">
+    <?php if ($revenueByMonth !== null): ?>
+    <div class="<?= $system !== null ? 'col-lg-8' : 'col-12' ?>">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between"><span>Revenue — last 6 months</span><span class="text-muted fw-normal small">All time: <?= e(money($stats['revenue_total'])) ?></span></div>
             <div class="card-body">
@@ -44,7 +59,9 @@ $max = max(1, ...array_values($revenueByMonth));
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <?php endif; ?>
+    <?php if ($system !== null): ?>
+    <div class="<?= $revenueByMonth !== null ? 'col-lg-4' : 'col-12' ?>">
         <div class="card h-100">
             <div class="card-header">System status</div>
             <ul class="list-group list-group-flush">
@@ -57,10 +74,14 @@ $max = max(1, ...array_values($revenueByMonth));
             </ul>
         </div>
     </div>
+    <?php endif; ?>
 </div>
+<?php endif; ?>
 
+<?php if ($panels): ?>
 <div class="row g-3">
-    <div class="col-lg-4">
+    <?php if ($providers !== null): ?>
+    <div class="<?= $panelCol ?>">
         <div class="card h-100">
             <div class="card-header">Provider status</div>
             <?php if (!$providers): ?>
@@ -77,7 +98,9 @@ $max = max(1, ...array_values($revenueByMonth));
             <?php endif; ?>
         </div>
     </div>
-    <div class="col-lg-4">
+    <?php endif; ?>
+    <?php if ($upcoming !== null): ?>
+    <div class="<?= $panelCol ?>">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between"><span>Upcoming renewals</span><a class="small fw-normal" href="<?= e(url('/admin/renewals')) ?>">View all</a></div>
             <?php if (!$upcoming): ?>
@@ -94,9 +117,11 @@ $max = max(1, ...array_values($revenueByMonth));
             <?php endif; ?>
         </div>
     </div>
-    <div class="col-lg-4">
+    <?php endif; ?>
+    <?php if ($activities !== null): ?>
+    <div class="<?= $panelCol ?>">
         <div class="card h-100">
-            <div class="card-header d-flex justify-content-between"><span>Recent activity</span><?php if (can('activities.view')): ?><a class="small fw-normal" href="<?= e(url('/admin/activity')) ?>">View all</a><?php endif; ?></div>
+            <div class="card-header d-flex justify-content-between"><span>Recent activity</span><a class="small fw-normal" href="<?= e(url('/admin/activity')) ?>">View all</a></div>
             <?php if (!$activities): ?>
                 <?= partial('partials/empty', ['icon' => 'clock-history', 'message' => 'No activity yet']) ?>
             <?php else: ?>
@@ -111,4 +136,6 @@ $max = max(1, ...array_values($revenueByMonth));
             <?php endif; ?>
         </div>
     </div>
+    <?php endif; ?>
 </div>
+<?php endif; ?>

@@ -12,45 +12,61 @@ final class DashboardController extends Controller
 {
     public function index(): string
     {
-        $stats = [
-            'customers' => (int) DB::value('SELECT COUNT(*) FROM customers'),
-            'active_customers' => (int) DB::value("SELECT COUNT(*) FROM customers WHERE status = 'active'"),
-            'websites' => DB::safeCount('SELECT COUNT(*) FROM websites'),
-            'domains' => DB::safeCount('SELECT COUNT(*) FROM domains'),
-            'mailboxes' => DB::safeCount('SELECT COUNT(*) FROM mailboxes'),
-            'active_subscriptions' => (int) DB::value("SELECT COUNT(*) FROM subscriptions WHERE status = 'active'"),
-            'pending_invoices' => (int) DB::value("SELECT COUNT(*) FROM invoices WHERE status IN ('pending','due','failed')"),
-            'outstanding' => (int) DB::value("SELECT COALESCE(SUM(total - amount_paid - amount_credited), 0) FROM invoices WHERE status IN ('pending','due','failed')"),
-            'revenue_month' => (int) DB::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'paid' AND paid_at >= ?", [date('Y-m-01')]),
-            'revenue_total' => (int) DB::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'paid'"),
-        ];
-
-        $months = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $months[date('Y-m', strtotime(date('Y-m-01') . " -$i months"))] = 0;
+        // Every card is shown only to staff whose role can open the page behind it.
+        $stats = [];
+        if (can('customers.view')) {
+            $stats['customers'] = (int) DB::value('SELECT COUNT(*) FROM customers');
+            $stats['active_customers'] = (int) DB::value("SELECT COUNT(*) FROM customers WHERE status = 'active'");
         }
-        $rows = DB::all(
-            "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, SUM(amount) AS total FROM payments
-             WHERE status = 'paid' AND paid_at >= ? GROUP BY ym",
-            [array_key_first($months) . '-01']
-        );
-        foreach ($rows as $r) {
-            $months[$r['ym']] = (int) $r['total'];
+        if (can('websites.view')) {
+            $stats['websites'] = DB::safeCount('SELECT COUNT(*) FROM websites');
+        }
+        if (can('domains.view')) {
+            $stats['domains'] = DB::safeCount('SELECT COUNT(*) FROM domains');
+        }
+        if (can('email.view')) {
+            $stats['mailboxes'] = DB::safeCount('SELECT COUNT(*) FROM mailboxes');
+        }
+        if (can('subscriptions.view')) {
+            $stats['active_subscriptions'] = (int) DB::value("SELECT COUNT(*) FROM subscriptions WHERE status = 'active'");
+        }
+        if (can('invoices.view')) {
+            $stats['pending_invoices'] = (int) DB::value("SELECT COUNT(*) FROM invoices WHERE status IN ('pending','due','failed')");
+            $stats['outstanding'] = (int) DB::value("SELECT COALESCE(SUM(total - amount_paid - amount_credited), 0) FROM invoices WHERE status IN ('pending','due','failed')");
+        }
+
+        $months = null;
+        if (can('billing.view')) {
+            $stats['revenue_month'] = (int) DB::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'paid' AND paid_at >= ?", [date('Y-m-01')]);
+            $stats['revenue_total'] = (int) DB::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'paid'");
+            $months = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $months[date('Y-m', strtotime(date('Y-m-01') . " -$i months"))] = 0;
+            }
+            $rows = DB::all(
+                "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, SUM(amount) AS total FROM payments
+                 WHERE status = 'paid' AND paid_at >= ? GROUP BY ym",
+                [array_key_first($months) . '-01']
+            );
+            foreach ($rows as $r) {
+                $months[$r['ym']] = (int) $r['total'];
+            }
         }
 
         return $this->view('admin/dashboard', [
             'title' => 'Dashboard',
+            'roleName' => (string) DB::value('SELECT name FROM roles WHERE id = ?', [(int) (\App\Core\Auth::user()['role_id'] ?? 0)]),
             'stats' => $stats,
             'revenueByMonth' => $months,
-            'providers' => $this->providerStatus(),
-            'system' => $this->systemStatus(),
-            'activities' => DB::all('SELECT a.*, c.name AS customer_name FROM activity_logs a LEFT JOIN customers c ON c.id = a.customer_id ORDER BY a.id DESC LIMIT 8'),
-            'upcoming' => DB::all(
+            'providers' => can('providers.view') ? $this->providerStatus() : null,
+            'system' => can('settings.manage') ? $this->systemStatus() : null,
+            'activities' => can('activities.view') ? DB::all('SELECT a.*, c.name AS customer_name FROM activity_logs a LEFT JOIN customers c ON c.id = a.customer_id ORDER BY a.id DESC LIMIT 8') : null,
+            'upcoming' => can('subscriptions.view') ? DB::all(
                 "SELECT s.id, s.renewal_date, s.price, c.name AS customer_name, p.name AS plan_name
                  FROM subscriptions s JOIN customers c ON c.id = s.customer_id JOIN plans p ON p.id = s.plan_id
                  WHERE s.status = 'active' AND s.auto_renew = 1 AND s.renewal_date <= CURDATE() + INTERVAL 30 DAY
                  ORDER BY s.renewal_date LIMIT 6"
-            ),
+            ) : null,
         ]);
     }
 

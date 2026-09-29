@@ -41,6 +41,16 @@ final class Auth
 
         if (!$valid) {
             Logger::security('failed_login', 'failure', 'Invalid email or password', $user['id'] ?? null, $email, $type);
+            // Right password on the wrong login page: point to the right one. Only revealed
+            // when the password is correct, so it does not help anyone guess accounts.
+            if ($user === null) {
+                $other = DB::one('SELECT password_hash FROM users WHERE email = ? AND type = ?', [$email, $type === 'admin' ? 'customer' : 'admin']);
+                if ($other && password_verify($password, $other['password_hash'])) {
+                    return $type === 'admin'
+                        ? 'This is a customer account. Please sign in on the customer login page (' . url('/login') . ').'
+                        : 'This is a staff account. Please sign in on the admin login page (' . url('/admin/login') . ').';
+                }
+            }
             return 'Invalid email or password.';
         }
         if ($user['status'] !== 'active') {
@@ -183,6 +193,10 @@ final class Auth
                 self::$permissions = $u['is_owner'] ? ['*'] : (json_decode((string) $u['permissions'], true) ?: []);
             }
         }
-        return in_array('*', self::$permissions, true) || in_array($permission, self::$permissions, true);
+        if (in_array('*', self::$permissions, true) || in_array($permission, self::$permissions, true)) {
+            return true;
+        }
+        // "Manage" always includes "view" for the same module (e.g. customers.manage => customers.view).
+        return str_ends_with($permission, '.view') && in_array(substr($permission, 0, -5) . '.manage', self::$permissions, true);
     }
 }

@@ -16,15 +16,74 @@ final class FtpFilesystem implements Filesystem
     public function __construct(string $host, int $port, string $user, string $password, bool $tls, string $root)
     {
         if (!function_exists('ftp_connect')) {
-            throw new FileException('The PHP FTP extension is not available on this server.');
+            throw new FileException('The PHP FTP extension is not enabled on this server. Enable "ftp" in your hosting PHP settings (on Hostinger: Advanced → PHP Configuration → PHP extensions).');
         }
-        $conn = $tls && function_exists('ftp_ssl_connect') ? @ftp_ssl_connect($host, $port, 15) : @ftp_connect($host, $port, 15);
-        if (!$conn || !@ftp_login($conn, $user, $password)) {
-            throw new FileException('Could not connect to the file server. Check the FTP settings.');
+        if ($tls && !function_exists('ftp_ssl_connect')) {
+            throw new FileException('FTPS is not available on this server (PHP was built without OpenSSL FTP support). Untick "Use FTPS" to use plain FTP.');
+        }
+        $conn = $tls ? @ftp_ssl_connect($host, $port, 20) : @ftp_connect($host, $port, 20);
+        if (!$conn) {
+            throw new FileException("Could not reach the FTP server $host on port $port. Check the host name and port (usually 21), and that the server allows connections from this panel.");
+        }
+        if (!@ftp_login($conn, $user, $password)) {
+            // Web requests may HTML-format PHP warnings (html_errors), so decode before matching.
+            $reason = strtolower(html_entity_decode(strip_tags((string) (error_get_last()['message'] ?? '')), ENT_QUOTES));
+            @ftp_close($conn);
+            if (!$tls && (str_contains($reason, 'tls') || str_contains($reason, 'ssl') || str_contains($reason, 'encrypt'))) {
+                throw new FileException('The FTP server requires encryption. Tick "Use FTPS (TLS)" and try again.');
+            }
+            if ($tls && str_contains($reason, 'command "auth"')) {
+                throw new FileException('This FTP server does not support FTPS. Untick "Use FTPS (TLS)" and try again.');
+            }
+            if ($tls && (str_contains($reason, 'ssl') || str_contains($reason, 'tls') || str_contains($reason, 'handshake') || str_contains($reason, 'certificate'))) {
+                throw new FileException('The secure (FTPS) connection failed. Untick "Use FTPS (TLS)" if the server only supports plain FTP.');
+            }
+            throw new FileException('The FTP server rejected the username or password. On Hostinger the username looks like u123456789 or u123456789.yourdomain.com.');
+        }
+        @ftp_set_option($conn, FTP_TIMEOUT_SEC, 30);
+        // Passive mode, connecting data channels to the same host as the control
+        // connection: servers behind NAT often announce an internal address.
+        if (defined('FTP_USEPASVADDRESS')) {
+            @ftp_set_option($conn, FTP_USEPASVADDRESS, false);
         }
         ftp_pasv($conn, true);
         $this->conn = $conn;
-        $this->root = '/' . trim($root, '/');
+        $this->root = $this->resolveRoot($root);
+    }
+
+    /**
+     * FTP accounts start inside the hosting account's home folder, so a full
+     * server path such as /home/u123/domains/site.com/public_html becomes
+     * /domains/site.com/public_html over FTP. Try the path as given, then the
+     * usual equivalents, and use the first folder that exists.
+     */
+    private function resolveRoot(string $root): string
+    {
+        $root = '/' . trim($root, '/');
+        $candidates = [$root];
+        if (preg_match('#^/home/[^/]+(/.*)?$#', $root, $m)) {
+            $candidates[] = $m[1] ?? '/';
+        }
+        if (preg_match('#(/domains/[^/]+/public_html)(/.*)?$#', $root, $m)) {
+            $candidates[] = $m[1] . ($m[2] ?? '');
+        }
+        if (preg_match('#^/domains/[^/]+/public_html$#', $root)) {
+            $candidates[] = '/public_html';
+        }
+        $home = @ftp_pwd($this->conn) ?: '/';
+        foreach (array_unique($candidates) as $c) {
+            if (@ftp_chdir($this->conn, $c)) {
+                @ftp_chdir($this->conn, $home);
+                return $c;
+            }
+        }
+        throw new FileException("The folder $root was not found on the FTP server. FTP logins start in \"$home\"; on Hostinger the website folder is usually /domains/yourdomain.com/public_html (or /public_html for a domain-only FTP account).");
+    }
+
+    /** The folder actually used on the FTP server (after resolving the configured path). */
+    public function root(): string
+    {
+        return $this->root;
     }
 
     public function __destruct()

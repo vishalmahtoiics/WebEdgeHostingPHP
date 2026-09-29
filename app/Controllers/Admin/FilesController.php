@@ -32,11 +32,15 @@ final class FilesController extends FileManagerController
             if ($data['file_access'] === 'local') {
                 $data['file_root'] = FileManager::safeLocalRoot(input_str('file_root') ?: (string) $w['root_directory']);
             } elseif ($data['file_access'] === 'ftp') {
-                $host = input_str('ftp_host');
-                $port = (int) input('ftp_port', 21);
+                // Accept what people paste from their hosting panel: ftp://host, host:21, trailing slashes.
+                $host = strtolower(trim((string) preg_replace('#^(s?ftps?://)#i', '', input_str('ftp_host')), '/ '));
+                $port = (int) input('ftp_port', 21) ?: 21;
+                if (preg_match('/^(.+):(\d{1,5})$/', $host, $m)) {
+                    [$host, $port] = [$m[1], (int) $m[2]];
+                }
                 $user = input_str('ftp_user');
                 if (!preg_match('/^[a-z0-9.\-]{1,253}$/i', $host) || $port < 1 || $port > 65535 || $user === '') {
-                    throw new FileException('Enter the FTP host, port and username.');
+                    throw new FileException('Enter the FTP host (e.g. ftp.yourdomain.com or the server IP), port and username.');
                 }
                 $data += [
                     'ftp_host' => $host,
@@ -52,11 +56,15 @@ final class FilesController extends FileManagerController
                     throw new FileException('Enter the FTP password.');
                 }
             }
-            DB::update('websites', $data, 'id = ?', [$id]);
-            $fresh = $this->website($id);
-            if ($fresh['file_access'] !== 'none') {
-                FileManager::forWebsite($fresh)->list('');
+            // Test the new settings before saving them, so a mistake never breaks working access.
+            if ($data['file_access'] !== 'none') {
+                $fs = FileManager::forWebsite([...$w, ...$data]);
+                $fs->list('');
+                if ($fs instanceof \App\Files\FtpFilesystem) {
+                    $data['file_root'] = $fs->root();
+                }
             }
+            DB::update('websites', $data, 'id = ?', [$id]);
         } catch (FileException $e) {
             $this->failed("/admin/websites/$id", ['File access: ' . $e->getMessage()]);
         }
@@ -64,6 +72,10 @@ final class FilesController extends FileManagerController
         if (isset($data['ftp_password_enc'])) {
             Logger::security('provider_credentials', 'info', "FTP credentials updated for website {$w['domain']}");
         }
-        $this->success("/admin/websites/$id", $data['file_access'] === 'none' ? 'File manager disabled for this website.' : 'File access saved and tested successfully.');
+        $this->success("/admin/websites/$id", match ($data['file_access']) {
+            'none' => 'File manager disabled for this website.',
+            'ftp' => 'File access saved and tested successfully. Using folder ' . $data['file_root'] . ' on the FTP server.',
+            default => 'File access saved and tested successfully.',
+        });
     }
 }

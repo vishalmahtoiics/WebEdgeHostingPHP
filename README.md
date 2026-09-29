@@ -86,7 +86,7 @@ php -S 127.0.0.1:8080 -t public public/index.php
 - All output is escaped (`e()`). There are no inline scripts, and a strict Content-Security-Policy is sent (all assets are served locally). The customer checkout page is the only page that also allows Razorpay's script and iframe.
 - The database uses native prepared statements only.
 - Login is rate-limited per account and per IP, and all failures are logged.
-- Permissions are checked on every route. Customer data is isolated: every customer query is scoped to the signed-in customer's ID.
+- Permissions are checked on every route. A role's *Manage* permission includes *View* for the same module. The admin dashboard only shows the cards and links the signed-in role can open. Customer data is isolated: every customer query is scoped to the signed-in customer's ID.
 - Secrets are encrypted at rest with AES-256-GCM and never displayed again. Logs record setting *names*, never values, and scrub `password=`, `token=` and similar patterns.
 - Uploads accept images only (PNG, JPG, WebP or ICO; no SVG), are checked by MIME type and saved under random names. Script execution is disabled in `uploads/`.
 
@@ -155,7 +155,7 @@ bin/migrate.php  Apply migrations
 **File manager & code editor**
 - **Setup:** each website's file access is configured on its admin page.
   - **Same hosting account (direct):** for websites on the same Hostinger hosting account as the panel, which is the usual setup. The folder is prefilled from the provider sync (`/home/uXXX/domains/site/public_html`).
-  - **FTP / FTPS:** for websites anywhere else. Credentials are stored encrypted.
+  - **FTP / FTPS:** for websites anywhere else. Credentials are stored encrypted. You can paste the full folder path from your hosting panel (`/home/u123/domains/site.com/public_html`), and the panel finds the matching FTP folder (`/domains/site.com/public_html`). Settings are tested before saving, and errors say what is wrong (host unreachable, wrong login, FTPS needed or not supported, folder missing). Passive-mode data connections always go to the FTP host itself, so servers behind NAT work. On Hostinger, use the FTP host and username shown under **Files → FTP Accounts**. The PHP `ftp` extension must be enabled.
 - **Operations:** browse, breadcrumbs, upload (multiple files), download, create file or folder, rename, move, copy, delete (folders recursively), and name search.
 - **Code editor:** CodeMirror, bundled locally, with PHP, HTML, CSS, JavaScript, JSON, XML, TXT, `.htaccess` and more. It has syntax highlighting, bracket and tag matching, Ctrl+S to save, Ctrl+F to search, and a warning about unsaved changes.
 - **Security:**

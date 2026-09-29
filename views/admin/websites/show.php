@@ -63,13 +63,13 @@ $apiLinked = $w['provider_id'] && $w['external_username'] && ($w['driver'] ?? 'm
                     <label class="form-label small" for="file_root">Website folder</label>
                     <input class="form-control form-control-sm mb-2" id="file_root" name="file_root" value="<?= e($w['file_root'] ?: $w['root_directory']) ?>" placeholder="/home/u123/domains/example.com/public_html">
                     <div class="row g-2 mb-2">
-                        <div class="col-8"><input class="form-control form-control-sm" name="ftp_host" value="<?= e($w['ftp_host']) ?>" placeholder="FTP host" aria-label="FTP host"></div>
+                        <div class="col-8"><input class="form-control form-control-sm" name="ftp_host" value="<?= e($w['ftp_host']) ?>" placeholder="FTP host, e.g. ftp.yourdomain.com" aria-label="FTP host"></div>
                         <div class="col-4"><input class="form-control form-control-sm" name="ftp_port" value="<?= e($w['ftp_port'] ?: 21) ?>" aria-label="FTP port"></div>
                         <div class="col-6"><input class="form-control form-control-sm" name="ftp_user" value="<?= e($w['ftp_user']) ?>" placeholder="FTP username" aria-label="FTP username"></div>
                         <div class="col-6"><input type="password" class="form-control form-control-sm" name="ftp_password" placeholder="<?= $w['ftp_password_enc'] ? '•••••• saved' : 'FTP password' ?>" autocomplete="new-password" aria-label="FTP password"></div>
                     </div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="ftp_tls" value="1" id="ftp_tls"<?= checked($w['ftp_tls']) ?>><label class="form-check-label small" for="ftp_tls">Use FTPS (TLS)</label></div>
-                    <div class="form-text mb-2">For FTP, the folder is the path on the FTP server (e.g. <code>/public_html</code>). Credentials are stored encrypted. The panel's own folder can never be opened.</div>
+                    <div class="form-text mb-2">For FTP you can paste the full folder path from your hosting panel. The panel finds the matching folder on the FTP server (on Hostinger usually <code>/domains/yourdomain.com/public_html</code>). Settings are tested before they are saved. Credentials are stored encrypted. The panel's own folder can never be opened.</div>
                     <button class="btn btn-sm btn-light">Save & test</button>
                 </form>
                 <?php else: ?>
