@@ -24,6 +24,11 @@ final class SettingsSchema
                     'site.tagline' => ['label' => 'Tagline', 'type' => 'text', 'default' => 'Hosting, domains & email — managed.'],
                     'site.timezone_note' => ['label' => 'Default date format', 'type' => 'select', 'default' => 'd M Y', 'options' => ['d M Y' => '28 Sep 2026', 'd/m/Y' => '28/09/2026', 'Y-m-d' => '2026-09-28']],
                     'site.maintenance' => ['label' => 'Maintenance mode (customers cannot log in)', 'type' => 'bool', 'default' => '0'],
+                    'site.public_home' => ['label' => 'Show the company website on the home page', 'type' => 'bool', 'default' => '1', 'help' => 'Off: visitors to the home page go straight to the client login.'],
+                    'site.hero_title' => ['label' => 'Home page headline', 'type' => 'text', 'default' => 'Fast, secure hosting — fully managed for you.'],
+                    'site.hero_text' => ['label' => 'Home page intro', 'type' => 'textarea', 'default' => 'Websites, domains, business email and SSL in one place, with one simple control panel and a real team looking after it.'],
+                    'site.show_admin_login' => ['label' => 'Show "Admin login" in the website header', 'type' => 'bool', 'default' => '1'],
+                    'site.contact_form' => ['label' => 'Contact form on the website', 'type' => 'bool', 'default' => '1', 'help' => 'Messages are saved under Communication → Enquiries and emailed to the admin alert addresses.'],
                 ],
             ],
             'branding' => [

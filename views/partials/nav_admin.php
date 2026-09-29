@@ -28,6 +28,7 @@ $sections = [
     ],
     'Communication' => [
         ['Notifications', 'megaphone', '/admin/notifications', 'notifications.manage'],
+        ['Website enquiries', 'chat-left-text', '/admin/enquiries', 'customers.view'],
     ],
     'Logs' => [
         ['Activity logs', 'clock-history', '/admin/activity', 'activities.view'],

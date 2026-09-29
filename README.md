@@ -179,6 +179,15 @@ bin/migrate.php  Apply migrations
 - **SMTP for the panel's own emails:** set this under **Settings → Email (SMTP) & alerts**. For Hostinger email: host `smtp.hostinger.com`, port 465, SSL/TLS, the full mailbox address as username. Use *Send test email* to check it.
 - **Admin alerts:** in the same tab, list who receives alerts. The panel emails them whenever a customer does something in their panel (one email per action, or per group of actions done in one step) and, optionally, when a customer signs in. Passwords are never included.
 
+## Company website (home page)
+
+Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company website: services, plans, why us, how it works, FAQ and a contact form. The header has **Client login** (`/login`) and **Admin login** (`/admin/login`); anyone already signed in sees **Go to dashboard** instead.
+
+- **Plans** are listed live from *Billing → Plans*, showing only active plans marked public. "Get started" opens the contact form with that plan pre-selected.
+- **Name, logo, colour, tagline, email, phone, WhatsApp, hours and address** come from *Settings* (Website, Branding, Company and Contact tabs). The headline and intro text are under *Settings → Website*.
+- **Contact form messages** are saved under *Communication → Website enquiries* and emailed to the admin alert addresses (*Settings → Email (SMTP) & alerts*). Spam protection is a hidden honeypot field, CSRF, and at most 5 messages per hour from one IP.
+- **Settings → Website** can hide the Admin login link, turn off the contact form, or switch the website off entirely. With the website off, `/` goes straight to the client login as before.
+
 ## Webmail (built in, at /mails)
 
 Customers read and send email at **`https://yourpanel/mails`**. Nothing needs installing: it's part of the panel.

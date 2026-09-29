@@ -11,6 +11,7 @@ use App\Controllers\WebhookController;
 use App\Controllers\WebmailController;
 
 $router->get('/', [HomeController::class, 'index']);
+$router->post('/contact', [HomeController::class, 'contact']);
 
 // Authentication
 $router->group('', ['auth' => 'guest'], static function ($r): void {
@@ -196,6 +197,10 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 
     $r->get('/notifications', [Admin\NotificationsController::class, 'index'], ['perm' => 'notifications.manage']);
     $r->post('/notifications/announce', [Admin\NotificationsController::class, 'announce'], ['perm' => 'notifications.manage']);
+    $r->get('/enquiries', [Admin\EnquiriesController::class, 'index'], ['perm' => 'customers.view']);
+    $r->get('/enquiries/{id}', [Admin\EnquiriesController::class, 'show'], ['perm' => 'customers.view']);
+    $r->post('/enquiries/{id}/status', [Admin\EnquiriesController::class, 'status'], ['perm' => 'customers.view']);
+    $r->post('/enquiries/{id}/delete', [Admin\EnquiriesController::class, 'destroy'], ['perm' => 'customers.manage']);
 
     $r->get('/activity', [Admin\LogsController::class, 'activity'], ['perm' => 'activities.view']);
     $r->get('/security', [Admin\LogsController::class, 'security'], ['perm' => 'security.view']);
