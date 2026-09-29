@@ -5,6 +5,7 @@
 !/storage/cache/.gitkeep
 /storage/installed.lock
 /storage/cron.lock
+/storage/webmail/
 /public/uploads/branding/*
 !/public/uploads/branding/.gitkeep
 /vendor/

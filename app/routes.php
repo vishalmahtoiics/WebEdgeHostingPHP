@@ -8,6 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\Customer;
 use App\Controllers\HomeController;
 use App\Controllers\WebhookController;
+use App\Controllers\WebmailApiController;
 
 $router->get('/', [HomeController::class, 'index']);
 
@@ -211,6 +212,8 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
     });
 
     $r->form('/settings', [Admin\SettingsController::class, 'index'], [Admin\SettingsController::class, 'update'], ['perm' => 'settings.manage']);
+    $r->get('/webmail', [Admin\WebmailController::class, 'index'], ['perm' => 'settings.manage']);
+    $r->post('/webmail', [Admin\WebmailController::class, 'install'], ['perm' => 'settings.manage']);
     $r->post('/settings/test-email', [Admin\SettingsController::class, 'testEmail'], ['perm' => 'settings.manage']);
 });
 
@@ -290,3 +293,6 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
 
 // Payment gateway webhooks: authenticated by the gateway's HMAC signature, not a session.
 $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay'], ['csrf' => false]);
+
+// Webmail password changes: authenticated by a shared secret header, not a session.
+$router->post('/webmail-api/password', [WebmailApiController::class, 'password'], ['csrf' => false]);
