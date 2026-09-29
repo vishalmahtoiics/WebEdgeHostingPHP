@@ -175,7 +175,13 @@ final class Webmail
 
     public static function prefs(string $email): array
     {
-        $p = DB::one('SELECT * FROM webmail_prefs WHERE email = ?', [$email]);
+        try {
+            $p = DB::one('SELECT * FROM webmail_prefs WHERE email = ?', [$email]);
+        } catch (\PDOException $e) {
+            // Preferences are optional: never let them stop someone reading mail.
+            error_log('Webmail preferences unavailable: ' . $e->getMessage());
+            $p = null;
+        }
         $mb = DB::one('SELECT display_name FROM mailboxes WHERE address = ?', [$email]);
         return [
             'display_name' => (string) ($p['display_name'] ?? ($mb['display_name'] ?? '')),

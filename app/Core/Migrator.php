@@ -45,4 +45,40 @@ final class Migrator
         $parts = preg_split('/;\s*$/m', implode("\n", $lines)) ?: [];
         return array_values(array_filter(array_map('trim', $parts), static fn (string $s): bool => $s !== ''));
     }
+
+    /**
+     * Apply new migrations automatically after an upload, so a missing
+     * "php bin/migrate.php" never breaks the site. Cheap: only touches the
+     * database when the newest migration file differs from the cached marker.
+     */
+    public static function autoRun(): void
+    {
+        $files = glob(BASE_PATH . '/database/migrations/*.sql') ?: [];
+        if (!$files || !is_file(BASE_PATH . '/storage/installed.lock')) {
+            return;
+        }
+        sort($files);
+        $latest = basename((string) end($files));
+        $marker = BASE_PATH . '/storage/cache/schema-version';
+        if (is_file($marker) && trim((string) file_get_contents($marker)) === $latest) {
+            return;
+        }
+        $lock = @fopen(BASE_PATH . '/storage/cache/migrate.lock', 'c');
+        if (!$lock || !flock($lock, LOCK_EX)) {
+            return;
+        }
+        try {
+            // Another request may have finished while we waited for the lock.
+            if (!(is_file($marker) && trim((string) file_get_contents($marker)) === $latest)) {
+                $applied = self::run(DB::pdo());
+                if ($applied) {
+                    error_log('WebEdge: applied database updates automatically: ' . implode(', ', $applied));
+                }
+                @file_put_contents($marker, $latest);
+            }
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
 }

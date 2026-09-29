@@ -141,7 +141,6 @@ final class SettingsSchema
                     'webmail.smtp_port' => ['label' => 'Default SMTP port', 'type' => 'number', 'default' => '465'],
                     'webmail.smtp_security' => ['label' => 'Default SMTP security', 'type' => 'select', 'default' => 'ssl', 'options' => ['ssl' => 'SSL/TLS', 'tls' => 'STARTTLS', 'none' => 'None (not recommended)']],
                     'webmail.any_domain' => ['label' => 'Allow addresses whose domain is not in the panel', 'type' => 'bool', 'default' => '0', 'help' => 'Off: only email domains added in the panel (and not suspended) can sign in.'],
-                    'webmail.hostnames' => ['label' => 'Webmail host names (comma separated, optional)', 'type' => 'text', 'default' => '', 'help' => 'E.g. mails.yourdomain.com. When such a host points to this panel, its home page opens the webmail.'],
                     'webmail.idle_minutes' => ['label' => 'Sign out after inactivity (minutes)', 'type' => 'number', 'default' => '120'],
                     'webmail.max_attachment_mb' => ['label' => 'Maximum total attachment size (MB)', 'type' => 'number', 'default' => '20'],
                 ],

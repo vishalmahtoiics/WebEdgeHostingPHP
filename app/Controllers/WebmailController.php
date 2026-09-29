@@ -540,6 +540,15 @@ final class WebmailController extends Controller
                 redirect('/mails');
             }
             return $this->page('webmail/error', ['title' => 'Mail error', 'folders' => [], 'folder' => '', 'message' => $e->getMessage()]);
+        } catch (\App\Core\HttpException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            // Unexpected problem: log it with a reference the user can quote, keep the webmail usable.
+            $ref = strtoupper(bin2hex(random_bytes(3)));
+            error_log("Webmail error [$ref] for " . (Webmail::user()['email'] ?? '?') . ': ' . $e);
+            http_response_code(500);
+            return $this->page('webmail/error', ['title' => 'Mail error', 'folders' => [], 'folder' => '',
+                'message' => "Something went wrong while loading your mail. Please try again. If it keeps happening, contact support and quote reference $ref."]);
         }
     }
 

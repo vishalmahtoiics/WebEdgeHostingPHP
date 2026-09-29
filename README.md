@@ -173,7 +173,6 @@ Customers read and send email at **`https://yourpanel/mails`**. Nothing needs in
 
 1. **Mail servers:** the defaults are under **Settings → Webmail** (Hostinger: `imap.hostinger.com` 993 SSL, `smtp.hostinger.com` 465 SSL). To use different servers for a domain, open **Email → the domain → Mail server for webmail** (admin only), fill in the servers and click **Test**. You can also enter a mailbox and password to test the login; they are not stored. Then click **Save**.
 2. **Signing in:** customers use their full email address and mailbox password. Only email domains added in the panel (and not suspended) can sign in, unless you allow other domains in Settings → Webmail. The customer panel has a **Webmail** link.
-3. **Own host name (optional):** to use e.g. `mails.yourdomain.com`, point that subdomain at the same folder as the panel (in hPanel, create the subdomain with a custom folder set to the panel's folder) or redirect it to `https://yourdomain.com/mails`. Then add the host name under **Settings → Webmail → Webmail host names**. Its home page then opens the webmail.
 
 Features:
 - **Mail:** inbox and folders (Drafts, Sent, Archive, Junk, Trash plus your own), unread counts, search, paging.
@@ -187,6 +186,8 @@ Security:
 - **Sign-in protection:** after 5 wrong passwords for an address (or 25 from one IP) in 15 minutes, sign-in pauses. Sign-ins are written to the security log. Sessions end after inactivity (set in settings).
 - **Safe HTML email:** scripts, event handlers, forms, frames and `javascript:` links are removed. The message is then shown in a frame with no script permission, under a content security policy.
 - **No leaks:** Bcc is never sent to recipients. Server names are never shown to customers.
+
+Database updates are applied automatically on the first page load after you upload new panel files (you can still run `php bin/migrate.php` by hand).
 
 If you tried the earlier Roundcube version, delete any `public/mails` folder inside the panel. A folder with that name would hide the built-in webmail. You can also delete `storage/webmail/`.
 

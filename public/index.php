@@ -13,6 +13,9 @@ if (PHP_SAPI === 'cli-server' && is_file(__DIR__ . parse_url($_SERVER['REQUEST_U
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 
+// Apply database updates shipped with new panel files (no SSH needed on shared hosting).
+App\Core\Migrator::autoRun();
+
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
