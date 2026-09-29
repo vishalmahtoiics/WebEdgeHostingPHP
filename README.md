@@ -184,7 +184,7 @@ bin/migrate.php  Apply migrations
 Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company website: services, plans, why us, how it works, FAQ and a contact form. The header has **Client login** (`/login`) and **Admin login** (`/admin/login`); anyone already signed in sees **Go to dashboard** instead.
 
 - **Plans** are listed live from *Billing → Plans*, showing only active plans marked public. "Get started" opens the contact form with that plan pre-selected.
-- **Name, logo, colour, tagline, email, phone, WhatsApp, hours and address** come from *Settings* (Website, Branding, Company and Contact tabs). The headline and intro text are under *Settings → Website*.
+- **Name, logo, colour, tagline, phone, WhatsApp, hours and address** come from *Settings* (Website, Branding, Company and Contact tabs). The email shown on the website is *Settings → Contact → Email shown on the website* (default `info@webedgesolution.in`), separate from the support email used for admin alerts. The headline and intro text are under *Settings → Website*.
 - **Contact form messages** are saved under *Communication → Website enquiries* and emailed to the admin alert addresses (*Settings → Email (SMTP) & alerts*). Spam protection is a hidden honeypot field, CSRF, and at most 5 messages per hour from one IP.
 - **Settings → Website** can hide the Admin login link, turn off the contact form, or switch the website off entirely. With the website off, `/` goes straight to the client login as before.
 

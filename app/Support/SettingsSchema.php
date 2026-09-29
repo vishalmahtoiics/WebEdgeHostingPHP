@@ -56,6 +56,7 @@ final class SettingsSchema
             'contact' => [
                 'label' => 'Contact', 'icon' => 'telephone',
                 'fields' => [
+                    'contact.public_email' => ['label' => 'Email shown on the website', 'type' => 'email', 'default' => 'info@webedgesolution.in', 'help' => 'Your official address, shown on the public home page. Admin alerts go to the addresses in the Email (SMTP) & alerts tab.'],
                     'contact.email' => ['label' => 'Support email', 'type' => 'email', 'default' => ''],
                     'contact.billing_email' => ['label' => 'Billing email', 'type' => 'email', 'default' => ''],
                     'contact.phone' => ['label' => 'Support phone', 'type' => 'text', 'default' => ''],

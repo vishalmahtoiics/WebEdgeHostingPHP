@@ -97,7 +97,7 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
             <div class="col-lg-3">
                 <div class="ws-footer-title">Get in touch</div>
                 <ul class="ws-footer-links">
-                    <?php if ($m = setting('contact.email')): ?><li><a href="mailto:<?= e($m) ?>"><i class="bi bi-envelope me-2"></i><?= e($m) ?></a></li><?php endif; ?>
+                    <?php if ($m = setting('contact.public_email')): ?><li><a href="mailto:<?= e($m) ?>"><i class="bi bi-envelope me-2"></i><?= e($m) ?></a></li><?php endif; ?>
                     <?php if ($p = setting('contact.phone')): ?><li><a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $p)) ?>"><i class="bi bi-telephone me-2"></i><?= e($p) ?></a></li><?php endif; ?>
                     <?php if ($h = setting('contact.hours')): ?><li class="ws-footer-text"><i class="bi bi-clock me-2"></i><?= e($h) ?></li><?php endif; ?>
                     <?php if ($c = setting('company.city')): ?><li class="ws-footer-text"><i class="bi bi-geo-alt me-2"></i><?= e($c) ?></li><?php endif; ?>

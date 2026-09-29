@@ -41,7 +41,7 @@ $faqs = [
     ['How do I pay and get my invoices?', 'Invoices appear in your client area, where you can pay online securely and download a GST invoice at any time. We remind you by email before each renewal.'],
     ['Can I manage DNS, email accounts and files myself?', 'Yes. Your client area lets you add email accounts, edit DNS records, manage files and databases, and see everything linked to your account.'],
     ['Do my websites get SSL (HTTPS)?', 'Yes — SSL certificates are set up for your websites so they open securely on https://.'],
-    ['What if I need help?', 'Use the contact form below' . (setting('contact.email') ? ', email ' . setting('contact.email') : '') . ($phone ? ' or call ' . $phone : '') . '. Existing customers can also reach us from their client area.'],
+    ['What if I need help?', 'Use the contact form below' . (setting('contact.public_email') ? ', email ' . setting('contact.public_email') : '') . ($phone ? ' or call ' . $phone : '') . '. Existing customers can also reach us from their client area.'],
 ];
 ?>
 
@@ -241,7 +241,7 @@ $faqs = [
                 <h2 class="ws-h2">Let’s get you online</h2>
                 <p class="ws-muted">Questions about a plan, moving your website or setting up email? Send us a message and we will reply as soon as we can.</p>
                 <div class="ws-contact-list">
-                    <?php if ($m = setting('contact.email')): ?><a href="mailto:<?= e($m) ?>"><i class="bi bi-envelope"></i><span><small>Email</small><?= e($m) ?></span></a><?php endif; ?>
+                    <?php if ($m = setting('contact.public_email')): ?><a href="mailto:<?= e($m) ?>"><i class="bi bi-envelope"></i><span><small>Email</small><?= e($m) ?></span></a><?php endif; ?>
                     <?php if ($phone !== ''): ?><a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $phone)) ?>"><i class="bi bi-telephone"></i><span><small>Phone</small><?= e($phone) ?></span></a><?php endif; ?>
                     <?php if ($whatsapp !== ''): ?><a href="https://wa.me/<?= e($whatsapp) ?>" rel="noopener" target="_blank"><i class="bi bi-whatsapp"></i><span><small>WhatsApp</small><?= e(setting('contact.whatsapp')) ?></span></a><?php endif; ?>
                     <?php if ($h = setting('contact.hours')): ?><div><i class="bi bi-clock"></i><span><small>Support hours</small><?= e($h) ?></span></div><?php endif; ?>
