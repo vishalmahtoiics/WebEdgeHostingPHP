@@ -12,7 +12,7 @@ The platform is being built in three phases.
 | **2. Hosting** | Provider accounts (Hostinger API), resource discovery & automatic import, domains, DNS, websites, databases, SSL | ✅ Done |
 | **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ✅ Done |
 | **Online payments** | Razorpay checkout on customer invoices, webhook reconciliation, admin review queue | ✅ Done |
-| **Webmail** | One-click branded webmail (Roundcube) on a subdomain, password change from webmail | ✅ Done |
+| **Webmail** | Built-in webmail at /mails with per-domain mail servers | ✅ Done |
 
 ## Requirements
 
@@ -167,23 +167,28 @@ bin/migrate.php  Apply migrations
   - Every change is written to the activity log.
 - **Access:** customers need the *File manager* permission and an active website. Admins need `files.manage`.
 
-## Customer webmail (mails.yourdomain.com)
+## Webmail (built in, at /mails)
 
-Customers can read and send email in the browser at their own branded address. It uses [Roundcube](https://roundcube.net) 1.7.4 (GPL), which the panel installs for you.
+Customers read and send email at **`https://yourpanel/mails`**. Nothing needs installing: it's part of the panel.
 
-1. In hPanel, go to **Domains → Subdomains** and create `mails` (for example, `mails.webedgesolutions.in`). Note the folder it shows. Then go to **Security → SSL** and install SSL for the subdomain.
-2. In the panel, go to **Webmail** (admin sidebar). Enter the address and that folder, then click **Install webmail**. The mail servers default to Hostinger's (`ssl://imap.hostinger.com:993`, `ssl://smtp.hostinger.com:465`).
-3. Optional, a second address such as `https://yourdomain.com/mails`: enter it under **Also open webmail at**. The suggested folder is the main site's web folder followed by `/mails`. If this panel runs on that domain, the panel places the folder inside its own `public/` for you. Both addresses use the same webmail, settings and data, and `/mails` without a trailing slash redirects to `/mails/`.
-4. That's it. Customers sign in with their full email address and mailbox password, from any device or network (sessions are not tied to one IP address, so mobile users stay signed in). The customer panel gets a **Webmail** link, and email pages show **Open webmail**.
+1. **Mail servers:** the defaults are under **Settings → Webmail** (Hostinger: `imap.hostinger.com` 993 SSL, `smtp.hostinger.com` 465 SSL). To use different servers for a domain, open **Email → the domain → Mail server for webmail** (admin only), fill in the servers and click **Test**. You can also enter a mailbox and password to test the login; they are not stored. Then click **Save**.
+2. **Signing in:** customers use their full email address and mailbox password. Only email domains added in the panel (and not suspended) can sign in, unless you allow other domains in Settings → Webmail. The customer panel has a **Webmail** link.
+3. **Own host name (optional):** to use e.g. `mails.yourdomain.com`, point that subdomain at the same folder as the panel (in hPanel, create the subdomain with a custom folder set to the panel's folder) or redirect it to `https://yourdomain.com/mails`. Then add the host name under **Settings → Webmail → Webmail host names**. Its home page then opens the webmail.
 
-Features: inbox and folders (Drafts, Sent, Junk, Trash, Archive), compose with attachments, reply and forward, search, contacts, identities and signatures, archiving, spam marking, zip downloads, new-mail notifications, dark mode, and a mobile layout. Users can change their mailbox password under **Settings → Password**. Filters and vacation replies are optional and need ManageSieve on the mail server.
+Features:
+- **Mail:** inbox and folders (Drafts, Sent, Archive, Junk, Trash plus your own), unread counts, search, paging.
+- **Reading:** HTML email in a sandboxed frame, with remote images hidden until "Show images". Inline images and attachment downloads work, and you can download the whole message (.eml).
+- **Writing:** compose, reply, reply all and forward (keeping attachments), with Cc/Bcc, attachments (limit set in settings) and drafts.
+- **Organising:** mark read/unread, flag, archive, junk, move, delete (to Trash, then permanently), empty Trash/Junk, new folders.
+- **Settings:** your name and signature. Password changes go through the provider API and follow the panel's password rules.
 
-How it's put together:
-- **Where the files live:** Roundcube lives in `storage/webmail/app` and its SQLite database, temp files and logs in `storage/webmail/data`. The panel never serves anything from `storage/`. The subdomain folder only gets two small entry files, an `.htaccess`, the logos and a blank page. Any hPanel placeholder files are renamed to `*.webedge-bak`. **Keep `storage/webmail/` when you upload panel updates.**
-- **Download checks:** the download is checked against a fixed SHA-256 checksum. Roundcube's web installer is removed.
-- **Security settings:** sign-in is rate-limited, and HTTPS is enforced when the address is `https://`.
-- **Branding:** brand name, colour, logo and favicon come from **Settings → Branding**. Without an uploaded logo, a logo is generated from your brand name and colour. Roundcube's own logo is never shown. Click **Save & repair** after changing branding.
-- **Password changes:** changes from webmail are sent to `/webmail-api/password` with a secret header. The panel checks the current password with the IMAP server, applies its own mailbox password rules, changes it through the provider API and logs it. After 5 wrong current passwords in 15 minutes, further attempts for that mailbox are refused.
+Security:
+- **Your own mail server:** everything goes through the user's own IMAP/SMTP server with their own login. The password is only kept in the server-side session, encrypted.
+- **Sign-in protection:** after 5 wrong passwords for an address (or 25 from one IP) in 15 minutes, sign-in pauses. Sign-ins are written to the security log. Sessions end after inactivity (set in settings).
+- **Safe HTML email:** scripts, event handlers, forms, frames and `javascript:` links are removed. The message is then shown in a frame with no script permission, under a content security policy.
+- **No leaks:** Bcc is never sent to recipients. Server names are never shown to customers.
+
+If you tried the earlier Roundcube version, delete any `public/mails` folder inside the panel. A folder with that name would hide the built-in webmail. You can also delete `storage/webmail/`.
 
 ## Online payments (Razorpay)
 

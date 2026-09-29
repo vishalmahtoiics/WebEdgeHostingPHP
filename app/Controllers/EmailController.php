@@ -49,8 +49,10 @@ abstract class EmailController extends Controller
             'isAdmin' => $this->isAdmin(),
             'canEdit' => $this->canEdit($d),
             'trace' => $this->traceWithin($d, query('trace')),
+            'servers' => \App\Mail\Webmail::serversFor($d),
+            'serverDefaults' => \App\Mail\Webmail::defaults(),
             'settings' => [
-                'webmail' => Settings::get('mail.webmail_url'),
+                'webmail' => Settings::get('mail.webmail_url') ?: (Settings::bool('webmail.enabled') ? url('/mails') : ''),
                 'imap' => Settings::get('mail.imap_host'),
                 'smtp' => Settings::get('mail.smtp_host_display'),
             ],

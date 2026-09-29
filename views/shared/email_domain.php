@@ -145,6 +145,37 @@ $aliasAddresses = array_column($aliases, 'address');
                 </div>
             </div>
         <?php endif; ?>
+        <?php if ($isAdmin && can('email.manage')): ?>
+            <form method="post" action="<?= e(url($base . '/servers')) ?>" class="card mb-3" autocomplete="off">
+                <?= csrf_field() ?>
+                <div class="card-header">Mail server for webmail <span class="small text-muted fw-normal">(admin only)</span></div>
+                <div class="card-body small">
+                    <p class="text-muted">Where webmail signs in and sends mail for <strong><?= e($domain['name']) ?></strong>. Leave a field empty to use the default from Settings → Webmail.</p>
+                    <?php foreach (['imap' => 'Incoming (IMAP)', 'smtp' => 'Outgoing (SMTP)'] as $k => $label): ?>
+                        <div class="fw-semibold mb-1"><?= e($label) ?></div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><input class="form-control form-control-sm" name="<?= $k ?>_host" value="<?= e(old($k . '_host', $domain[$k . '_host'] ?? '')) ?>" placeholder="<?= e($serverDefaults[$k]['host']) ?>" aria-label="<?= e($label) ?> server"></div>
+                            <div class="col-3"><input class="form-control form-control-sm" name="<?= $k ?>_port" value="<?= e(old($k . '_port', (string) ($domain[$k . '_port'] ?? ''))) ?>" placeholder="<?= (int) $serverDefaults[$k]['port'] ?>" aria-label="<?= e($label) ?> port" inputmode="numeric"></div>
+                            <div class="col-3"><select class="form-select form-select-sm" name="<?= $k ?>_security" aria-label="<?= e($label) ?> security">
+                                <option value="">Default (<?= e(strtoupper($serverDefaults[$k]['security'])) ?>)</option>
+                                <?php foreach (['ssl' => 'SSL/TLS', 'tls' => 'STARTTLS', 'none' => 'None'] as $v => $l): ?><option value="<?= $v ?>"<?= selected((string) old($k . '_security', (string) ($domain[$k . '_security'] ?? '')), $v) ?>><?= $l ?></option><?php endforeach; ?>
+                            </select></div>
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="text-muted mb-2">In use: <code><?= e($servers['imap']['host'] . ':' . $servers['imap']['port']) ?></code> · <code><?= e($servers['smtp']['host'] . ':' . $servers['smtp']['port']) ?></code></div>
+                    <details class="mb-2"><summary class="text-muted">Test with a mailbox (optional, not saved)</summary>
+                        <div class="row g-2 mt-1">
+                            <div class="col-7"><input class="form-control form-control-sm" name="test_email" value="<?= e(old('test_email')) ?>" placeholder="info@<?= e($domain['name']) ?>" aria-label="Test address"></div>
+                            <div class="col-5"><input type="password" class="form-control form-control-sm" name="test_password" placeholder="Password" aria-label="Test password" autocomplete="new-password"></div>
+                        </div>
+                    </details>
+                </div>
+                <div class="card-footer bg-white d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" name="do" value="save">Save</button>
+                    <button class="btn btn-sm btn-light" name="do" value="test" data-loading="Testing mail servers…" data-loading-text="Connecting to the incoming and outgoing mail servers.">Test</button>
+                </div>
+            </form>
+        <?php endif; ?>
         <?php if ($isAdmin): ?>
             <div class="card">
                 <div class="card-header">Details <span class="small text-muted fw-normal">(admin only)</span></div>

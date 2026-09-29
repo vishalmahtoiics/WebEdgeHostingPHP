@@ -8,7 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\Customer;
 use App\Controllers\HomeController;
 use App\Controllers\WebhookController;
-use App\Controllers\WebmailApiController;
+use App\Controllers\WebmailController;
 
 $router->get('/', [HomeController::class, 'index']);
 
@@ -120,6 +120,7 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
         $r->post('/{id}/status', [Admin\EmailController::class, 'status']);
         $r->post('/{id}/assign', [Admin\EmailController::class, 'assign']);
         $r->post('/{id}/import', [Admin\EmailController::class, 'import']);
+        $r->post('/{id}/servers', [Admin\EmailController::class, 'servers']);
         $r->post('/{id}/delete', [Admin\EmailController::class, 'destroy']);
         $r->post('/{id}/mailboxes', [Admin\EmailController::class, 'storeMailbox']);
         $r->post('/{id}/mailboxes/{mid}', [Admin\EmailController::class, 'updateMailbox']);
@@ -212,8 +213,6 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
     });
 
     $r->form('/settings', [Admin\SettingsController::class, 'index'], [Admin\SettingsController::class, 'update'], ['perm' => 'settings.manage']);
-    $r->get('/webmail', [Admin\WebmailController::class, 'index'], ['perm' => 'settings.manage']);
-    $r->post('/webmail', [Admin\WebmailController::class, 'install'], ['perm' => 'settings.manage']);
     $r->post('/settings/test-email', [Admin\SettingsController::class, 'testEmail'], ['perm' => 'settings.manage']);
 });
 
@@ -294,5 +293,19 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
 // Payment gateway webhooks: authenticated by the gateway's HMAC signature, not a session.
 $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay'], ['csrf' => false]);
 
-// Webmail password changes: authenticated by a shared secret header, not a session.
-$router->post('/webmail-api/password', [WebmailApiController::class, 'password'], ['csrf' => false]);
+// Webmail (mailbox address + password; separate from panel accounts)
+$router->group('/mails', [], static function ($r): void {
+    $r->get('', [WebmailController::class, 'index']);
+    $r->post('/login', [WebmailController::class, 'login']);
+    $r->post('/logout', [WebmailController::class, 'logout']);
+    $r->get('/list', [WebmailController::class, 'list']);
+    $r->get('/read', [WebmailController::class, 'read']);
+    $r->get('/part', [WebmailController::class, 'part']);
+    $r->get('/source', [WebmailController::class, 'source']);
+    $r->get('/compose', [WebmailController::class, 'compose']);
+    $r->post('/send', [WebmailController::class, 'send']);
+    $r->post('/action', [WebmailController::class, 'action']);
+    $r->post('/folders', [WebmailController::class, 'createFolder']);
+    $r->form('/settings', [WebmailController::class, 'settings'], [WebmailController::class, 'saveSettings']);
+    $r->post('/password', [WebmailController::class, 'password']);
+});

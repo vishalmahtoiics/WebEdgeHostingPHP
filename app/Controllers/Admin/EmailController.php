@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Admin;
 
+use App\Core\Session;
 use App\Controllers\EmailController as BaseEmailController;
 use App\Core\DB;
 use App\Providers\ProviderException;
@@ -150,5 +151,44 @@ final class EmailController extends BaseEmailController
             'address' => $address,
             'trace' => $address !== '' ? EmailService::trace($address) : null,
         ]);
+    }
+
+    /** Mail server settings used by the webmail for this domain (empty = defaults). Save or test. */
+    public function servers(int $id): string
+    {
+        $d = $this->emailDomain($id);
+        $data = [];
+        $errors = [];
+        foreach (['imap' => 'IMAP', 'smtp' => 'SMTP'] as $k => $label) {
+            $host = strtolower(trim(input_str($k . '_host')));
+            $port = trim(input_str($k . '_port'));
+            $sec = input_str($k . '_security');
+            if ($host !== '' && !\App\Mail\Webmail::validHost($host)) {
+                $errors[] = "Enter a valid $label server name, e.g. mail.example.com.";
+            }
+            if ($port !== '' && (!ctype_digit($port) || (int) $port < 1 || (int) $port > 65535)) {
+                $errors[] = "Enter a valid $label port.";
+            }
+            $data[$k . '_host'] = $host !== '' ? $host : null;
+            $data[$k . '_port'] = $port !== '' ? (int) $port : null;
+            $data[$k . '_security'] = in_array($sec, ['ssl', 'tls', 'none'], true) ? $sec : null;
+        }
+        if ($errors) {
+            $this->failed("/admin/email/$id", $errors);
+        }
+        if (input_str('do') === 'test') {
+            $servers = \App\Mail\Webmail::serversFor([...$d, ...$data]);
+            $email = strtolower(trim(input_str('test_email')));
+            if ($email !== '' && !str_ends_with($email, '@' . $d['name'])) {
+                $this->failed("/admin/email/$id", ["The test address must be on {$d['name']}."]);
+            }
+            [$ok, $msg] = \App\Mail\Webmail::test($servers, $email, (string) ($_POST['test_password'] ?? ''));
+            Session::flashInput($_POST);
+            flash($ok ? 'success' : 'danger', 'Mail server test: ' . $msg);
+            redirect("/admin/email/$id");
+        }
+        DB::update('email_domains', $data + ['updated_at' => now()], 'id = ?', [$id]);
+        \App\Core\Logger::activity('email', 'mail_servers', "Updated mail server settings for {$d['name']}", 'email_domain', $id, $d['customer_id'] ? (int) $d['customer_id'] : null);
+        $this->success("/admin/email/$id", 'Mail server settings saved. Webmail sign-ins for this domain use them from now on.');
     }
 }

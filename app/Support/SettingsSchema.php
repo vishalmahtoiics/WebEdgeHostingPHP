@@ -130,6 +130,22 @@ final class SettingsSchema
                     'provider.nameserver_2' => ['label' => 'Nameserver 2 shown to customers', 'type' => 'text', 'default' => ''],
                 ],
             ],
+            'webmail' => [
+                'label' => 'Webmail', 'icon' => 'envelope-open',
+                'fields' => [
+                    'webmail.enabled' => ['label' => 'Enable webmail at /mails', 'type' => 'bool', 'default' => '1', 'help' => 'Customers sign in with their full email address and mailbox password. Mail server settings can be changed per email domain (Email → domain → Mail server).'],
+                    'webmail.imap_host' => ['label' => 'Default IMAP server', 'type' => 'text', 'default' => 'imap.hostinger.com'],
+                    'webmail.imap_port' => ['label' => 'Default IMAP port', 'type' => 'number', 'default' => '993'],
+                    'webmail.imap_security' => ['label' => 'Default IMAP security', 'type' => 'select', 'default' => 'ssl', 'options' => ['ssl' => 'SSL/TLS', 'tls' => 'STARTTLS', 'none' => 'None (not recommended)']],
+                    'webmail.smtp_host' => ['label' => 'Default SMTP server', 'type' => 'text', 'default' => 'smtp.hostinger.com'],
+                    'webmail.smtp_port' => ['label' => 'Default SMTP port', 'type' => 'number', 'default' => '465'],
+                    'webmail.smtp_security' => ['label' => 'Default SMTP security', 'type' => 'select', 'default' => 'ssl', 'options' => ['ssl' => 'SSL/TLS', 'tls' => 'STARTTLS', 'none' => 'None (not recommended)']],
+                    'webmail.any_domain' => ['label' => 'Allow addresses whose domain is not in the panel', 'type' => 'bool', 'default' => '0', 'help' => 'Off: only email domains added in the panel (and not suspended) can sign in.'],
+                    'webmail.hostnames' => ['label' => 'Webmail host names (comma separated, optional)', 'type' => 'text', 'default' => '', 'help' => 'E.g. mails.yourdomain.com. When such a host points to this panel, its home page opens the webmail.'],
+                    'webmail.idle_minutes' => ['label' => 'Sign out after inactivity (minutes)', 'type' => 'number', 'default' => '120'],
+                    'webmail.max_attachment_mb' => ['label' => 'Maximum total attachment size (MB)', 'type' => 'number', 'default' => '20'],
+                ],
+            ],
             'security' => [
                 'label' => 'Security', 'icon' => 'shield-lock',
                 'fields' => [

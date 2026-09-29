@@ -12,7 +12,6 @@ $sections = [
         ['Domains & DNS', 'globe2', '/admin/domains', 'domains.view'],
         ['Databases', 'database', '/admin/databases', 'databases.view'],
         ['Email', 'envelope', '/admin/email', 'email.view'],
-        ['Webmail', 'mailbox', '/admin/webmail', 'settings.manage'],
         ['SSL certificates', 'shield-lock', '/admin/ssl', 'domains.view'],
     ],
     'Providers' => [

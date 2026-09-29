@@ -11,8 +11,9 @@
             return;
         }
         // Full-screen loading overlay for long actions: <form data-loading="Title" data-loading-text="Details">
-        if (form.hasAttribute('data-loading')) {
-            showLoading(form.getAttribute('data-loading'), form.getAttribute('data-loading-text') || '');
+        var loadingEl = e.submitter && e.submitter.hasAttribute('data-loading') ? e.submitter : (form.hasAttribute('data-loading') ? form : null);
+        if (loadingEl) {
+            showLoading(loadingEl.getAttribute('data-loading'), loadingEl.getAttribute('data-loading-text') || '');
         }
         // Prevent double submission.
         var btns = form.querySelectorAll('button[type=submit], button:not([type])');
@@ -23,7 +24,7 @@
 
     function showLoading(title, text) {
         if (document.getElementById('we-loading')) return;
-        var steps = ['Connecting to the provider', 'Fetching domains and websites', 'Fetching databases and email', 'Adding everything to the panel', 'Almost done'];
+        var steps = title.indexOf('Sync') === 0 ? ['Connecting to the provider', 'Fetching domains and websites', 'Fetching databases and email', 'Adding everything to the panel', 'Almost done'] : ['Working', 'Almost done'];
         var box = document.createElement('div');
         box.id = 'we-loading';
         box.className = 'we-loading';

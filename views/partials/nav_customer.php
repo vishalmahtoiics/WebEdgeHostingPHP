@@ -9,7 +9,7 @@ $sections = [
         ['Domains & DNS', 'globe2', '/customer/domains', 'domains'],
         ['Databases', 'database', '/customer/databases', 'databases'],
         ['Email', 'envelope', '/customer/email', 'email'],
-        ['Webmail', 'mailbox', (string) App\Core\Settings::get('mail.webmail_url', ''), 'email'],
+        ['Webmail', 'mailbox', App\Core\Settings::bool('webmail.enabled') ? rtrim((string) (App\Core\Settings::get('mail.webmail_url') ?: config('app.url') . '/mails'), '/') : '', 'email'],
         ['SSL certificates', 'shield-lock', '/customer/ssl', null],
     ],
     'Billing' => [
