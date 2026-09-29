@@ -1,19 +1,17 @@
 <?php
-use App\Controllers\Admin\PlansController;
-use App\Core\Session;
 use App\Core\Settings;
-use App\Support\BillingCycle;
+use App\Support\SiteServices;
 
 $siteName = (string) (setting('site.name') ?: brand_name());
-$heroTitle = (string) (setting('site.hero_title') ?: 'Fast, secure hosting — fully managed for you.');
+$heroTitle = (string) (setting('site.hero_title') ?: 'We design, build & grow — your business online.');
 $heroText = (string) setting('site.hero_text');
 $webmail = setting('webmail.enabled') ? url('/mails') : null;
-$flashes = Session::pullFlashes();
-$price = static fn ($paise): string => preg_replace('/\.00$/', '', money($paise));
 $gstNote = Settings::bool('gst.prices_inclusive') ? 'Prices include GST.' : 'Prices exclude GST.';
 $phone = (string) setting('contact.phone');
-$whatsapp = preg_replace('/\D/', '', (string) setting('contact.whatsapp'));
-$planLimits = ['max_websites' => 'window', 'storage_mb' => 'device-hdd', 'bandwidth_gb' => 'speedometer', 'max_domains' => 'globe2', 'max_mailboxes' => 'envelope', 'max_databases' => 'database'];
+$digital = $services['digital'] ?? [];
+$hosting = $services['hosting'] ?? [];
+$serviceUrl = static fn (array $s): string => url('/services/' . $s['slug']);
+$price = static fn ($paise): string => preg_replace('/\.00$/', '', money($paise));
 
 // Split the headline so its last phrase gets the accent colour.
 $accent = '';
@@ -21,26 +19,27 @@ if (preg_match('/^(.*[—–:]\s*)(\S.*)$/u', $heroTitle, $m)) {
     [$heroTitle, $accent] = [$m[1], $m[2]];
 }
 
-$services = [
-    ['window-stack', 'Website hosting', 'Launch WordPress, PHP or static sites on fast servers, with files, FTP and databases ready from day one.'],
-    ['globe2', 'Domains & DNS', 'Register or connect your domain and manage every DNS record from one clear editor — changes publish in a click.'],
-    ['envelope-paper', 'Business email', 'Professional addresses like you@yourbrand.com, with aliases, forwarding and a webmail you can open from anywhere.'],
-    ['shield-lock', 'SSL certificates', 'Keep every site on HTTPS so browsers show the padlock and your visitors’ data stays private.'],
-    ['database', 'Databases', 'Create MySQL databases and users for your applications without touching a command line.'],
-    ['folder2-open', 'File manager', 'Upload, edit and organise your website files right in the browser, or connect with your favourite FTP app.'],
-];
 $reasons = [
-    ['grid-1x2', 'One panel for everything', 'Websites, domains, email, invoices and support in a single dashboard built to be simple.'],
-    ['envelope-at', 'Email that goes where you go', 'Read and send mail from any browser' . ($webmail ? ' at ' . preg_replace('#^https?://#', '', $webmail) : '') . ', or connect Outlook, Gmail or your phone.'],
-    ['receipt', 'Clear, honest billing', 'Proper GST invoices, reminders before renewal and secure online payment by UPI, card or net banking.'],
-    ['headset', 'People who help', 'Talk to a real team that knows your account' . (setting('contact.hours') ? ' — ' . setting('contact.hours') : '') . '.'],
+    ['people', 'One team for everything', 'Design, development, marketing and hosting under one roof — one point of contact, no running between agencies.'],
+    ['chat-dots', 'Clear communication', 'You always know what is happening: we agree the plan, share progress and ask before anything changes.'],
+    ['phone', 'Mobile-first and fast', 'Everything we build is designed for phones first, because that is where most of your customers are.'],
+    ['headset', 'Support after launch', 'We stay with you after go-live for updates, fixes, hosting and growth' . (setting('contact.hours') ? ' — ' . setting('contact.hours') : '') . '.'],
+    ['receipt', 'Honest pricing', 'A clear quote before we start, proper GST invoices and secure online payment by UPI, card or net banking.'],
+    ['envelope-at', 'Your own client area', 'Manage your hosting, domains, email and invoices yourself' . ($webmail ? ', and read email from anywhere at ' . preg_replace('#^https?://#', '', $webmail) : '') . '.'],
+];
+$steps = [
+    ['chat-square-text', 'Discuss', 'We understand your business, goals and budget, and suggest what will work best.'],
+    ['pencil-square', 'Plan & design', 'You get a clear plan, timeline and quote, then designs to review before we build.'],
+    ['code-slash', 'Build & launch', 'We develop, test on every device and launch on your domain with SSL.'],
+    ['graph-up-arrow', 'Grow & support', 'Marketing, updates, hosting and help whenever you need it.'],
 ];
 $faqs = [
-    ['Can you move my existing website to you?', 'Yes. Send us a message with your current host and website address, and we will guide you through moving your files, databases and email with as little downtime as possible.'],
-    ['How do I sign in to my email?', $webmail ? 'Open ' . preg_replace('#^https?://#', '', $webmail) . ' from any browser and sign in with your full email address and mailbox password. You can also add the account to Outlook, Apple Mail, Gmail or your phone.' : 'You can add your mailbox to Outlook, Apple Mail, Gmail or your phone. Your mail settings are shown in your client area.'],
-    ['How do I pay and get my invoices?', 'Invoices appear in your client area, where you can pay online securely and download a GST invoice at any time. We remind you by email before each renewal.'],
-    ['Can I manage DNS, email accounts and files myself?', 'Yes. Your client area lets you add email accounts, edit DNS records, manage files and databases, and see everything linked to your account.'],
-    ['Do my websites get SSL (HTTPS)?', 'Yes — SSL certificates are set up for your websites so they open securely on https://.'],
+    ['How much does a website or app cost?', 'It depends on what you need — the number of pages or screens, features and content. Tell us about your project and we will send a clear quote with no hidden charges.'],
+    ['How long does it take to build a website?', 'A simple business website is usually much quicker than a large custom site, app or online store. After our first discussion we share a timeline for your exact project.'],
+    ['Do you build apps for both Android and iPhone?', 'Yes. We design and develop apps for Android and iOS, as well as web apps, and can help publish them on the Play Store and App Store.'],
+    ['Can you run our Google and social media marketing?', 'Yes. We plan and manage Google Ads, Facebook and Instagram campaigns, social media posting and SEO, with regular reports on results.'],
+    ['Can you redesign or move my existing website?', 'Yes. We can redesign your current site or move it to our hosting — including files, databases and email — with as little downtime as possible.'],
+    ['How do I sign in to my email?', $webmail ? 'Open ' . preg_replace('#^https?://#', '', $webmail) . ' in any browser and sign in with your full email address and password. You can also add it to Outlook, Gmail or your phone.' : 'You can add your mailbox to Outlook, Apple Mail, Gmail or your phone. Your settings are shown in your client area.'],
     ['What if I need help?', 'Use the contact form below' . (setting('contact.public_email') ? ', email ' . setting('contact.public_email') : '') . ($phone ? ' or call ' . $phone : '') . '. Existing customers can also reach us from their client area.'],
 ];
 ?>
@@ -55,40 +54,43 @@ $faqs = [
                 <h1 class="ws-hero-title"><?= e($heroTitle) ?><?php if ($accent !== ''): ?><span class="ws-gradient-text"><?= e($accent) ?></span><?php endif; ?></h1>
                 <?php if ($heroText !== ''): ?><p class="ws-hero-lead"><?= e($heroText) ?></p><?php endif; ?>
                 <div class="d-flex flex-wrap gap-2 mt-4">
-                    <a href="#plans" class="btn ws-btn ws-btn-primary ws-btn-lg">See plans <i class="bi bi-arrow-right ms-1"></i></a>
-                    <a href="#contact" class="btn ws-btn ws-btn-outline ws-btn-lg"><i class="bi bi-chat-dots me-1"></i>Talk to us</a>
+                    <a href="#contact" class="btn ws-btn ws-btn-primary ws-btn-lg">Start your project <i class="bi bi-arrow-right ms-1"></i></a>
+                    <a href="#services" class="btn ws-btn ws-btn-outline ws-btn-lg"><i class="bi bi-grid me-1"></i>Our services</a>
                 </div>
-                <ul class="ws-hero-points">
-                    <li><i class="bi bi-check-circle-fill"></i>SSL on every site</li>
-                    <li><i class="bi bi-check-circle-fill"></i>Business email &amp; webmail</li>
-                    <li><i class="bi bi-check-circle-fill"></i>Easy control panel</li>
-                </ul>
+                <?php if ($digital || $hosting): ?>
+                    <div class="ws-hero-tags">
+                        <?php foreach (array_slice([...$digital, ...$hosting], 0, 6) as $s): ?>
+                            <a href="<?= e($serviceUrl($s)) ?>"><i class="bi bi-<?= e(SiteServices::icon($s['icon'])) ?>"></i><?= e($s['title']) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="col-lg-6">
-                <div class="ws-mock" aria-hidden="true">
-                    <div class="ws-mock-bar"><span></span><span></span><span></span><div class="ws-mock-url"><i class="bi bi-lock-fill"></i> <?= e(preg_replace('/[^a-z0-9.\-]/i', '', (string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? ''))) ?: 'panel') ?>/customer</div></div>
-                    <div class="ws-mock-body">
-                        <div class="ws-mock-side">
-                            <div class="ws-mock-logo"><?= e(mb_strtoupper(mb_substr(brand_name(), 0, 1))) ?></div>
-                            <i class="bi bi-speedometer2 active"></i><i class="bi bi-window"></i><i class="bi bi-globe2"></i><i class="bi bi-envelope"></i><i class="bi bi-receipt"></i>
-                        </div>
-                        <div class="ws-mock-main">
-                            <div class="ws-mock-hello">Welcome back 👋</div>
-                            <div class="ws-mock-cards">
-                                <div class="ws-mock-card"><i class="bi bi-window text-primary"></i><b>Websites</b><span class="ws-pill ok">Online</span></div>
-                                <div class="ws-mock-card"><i class="bi bi-shield-check text-success"></i><b>SSL</b><span class="ws-pill ok">Secure</span></div>
-                                <div class="ws-mock-card"><i class="bi bi-envelope text-warning"></i><b>Email</b><span class="ws-pill">Mailboxes</span></div>
+                <div class="ws-showcase" aria-hidden="true">
+                    <div class="ws-mock ws-mock-site">
+                        <div class="ws-mock-bar"><span></span><span></span><span></span><div class="ws-mock-url"><i class="bi bi-lock-fill"></i> yourbrand.com</div></div>
+                        <div class="ws-site">
+                            <div class="ws-site-nav"><span class="logo"></span><span class="l"></span><span class="l"></span><span class="l"></span><span class="btn-s"></span></div>
+                            <div class="ws-site-hero">
+                                <div class="txt"><span class="h1"></span><span class="h1 short"></span><span class="p"></span><span class="p short"></span><span class="cta"></span></div>
+                                <div class="img"><i class="bi bi-image"></i></div>
                             </div>
-                            <div class="ws-mock-panel">
-                                <div class="ws-mock-row"><span class="dot"></span><span class="line w70"></span><span class="ws-pill ok">Active</span></div>
-                                <div class="ws-mock-row"><span class="dot"></span><span class="line w55"></span><span class="ws-pill ok">Active</span></div>
-                                <div class="ws-mock-row"><span class="dot warn"></span><span class="line w40"></span><span class="ws-pill warn">Renews soon</span></div>
-                            </div>
+                            <div class="ws-site-cards"><span></span><span></span><span></span></div>
                         </div>
                     </div>
+                    <div class="ws-phone">
+                        <div class="ws-phone-notch"></div>
+                        <div class="ws-phone-screen">
+                            <div class="bar"></div>
+                            <div class="card-a"><i class="bi bi-bag-check"></i></div>
+                            <div class="row-a"></div><div class="row-a short"></div>
+                            <div class="grid-a"><span></span><span></span><span></span><span></span></div>
+                            <div class="tab"><i class="bi bi-house-door"></i><i class="bi bi-search"></i><i class="bi bi-heart"></i><i class="bi bi-person"></i></div>
+                        </div>
+                    </div>
+                    <div class="ws-float ws-float-1"><i class="bi bi-rocket-takeoff-fill"></i><div><b>Website launched</b><small>Live on your domain</small></div></div>
+                    <div class="ws-float ws-float-2"><i class="bi bi-graph-up-arrow"></i><div><b>Campaign live</b><small>Google &amp; Instagram</small></div></div>
                 </div>
-                <div class="ws-float ws-float-1" aria-hidden="true"><i class="bi bi-shield-fill-check"></i><div><b>SSL active</b><small>Your site is secure</small></div></div>
-                <div class="ws-float ws-float-2" aria-hidden="true"><i class="bi bi-envelope-check-fill"></i><div><b>New mailbox</b><small>hello@yourbrand.com</small></div></div>
             </div>
         </div>
     </div>
@@ -99,17 +101,54 @@ $faqs = [
     <div class="container">
         <div class="ws-section-head reveal">
             <span class="ws-kicker">What we do</span>
-            <h2>Everything your business needs online</h2>
-            <p>From your first website to email for the whole team — set up properly and looked after for you.</p>
+            <h2>Everything your business needs to grow online</h2>
+            <p>From your brand and website to apps, marketing and hosting — planned, built and looked after by one team.</p>
         </div>
-        <div class="row g-4">
-            <?php foreach ($services as $i => [$icon, $title, $text]): ?>
-                <div class="col-md-6 col-lg-4 reveal" style="--d: <?= $i * 60 ?>ms">
-                    <div class="ws-card ws-service">
-                        <div class="ws-icon"><i class="bi bi-<?= e($icon) ?>"></i></div>
-                        <h3><?= e($title) ?></h3>
-                        <p><?= e($text) ?></p>
+        <?php if ($digital): ?>
+            <div class="row g-4 justify-content-center">
+                <?php foreach ($digital as $i => $s): ?>
+                    <div class="col-md-6 col-lg-4 reveal" style="--d: <?= ($i % 3) * 70 ?>ms">
+                        <a class="ws-card ws-service ws-service-link" href="<?= e($serviceUrl($s)) ?>">
+                            <div class="ws-icon ws-icon-c<?= $i % 6 ?>"><i class="bi bi-<?= e(SiteServices::icon($s['icon'])) ?>"></i></div>
+                            <h3><?= e($s['title']) ?></h3>
+                            <p><?= e($s['summary']) ?></p>
+                            <span class="ws-more">
+                                <?php if ($s['price_from'] !== null): ?><span class="ws-from">From <?= e($price($s['price_from'])) ?><?= $s['price_note'] ? ' ' . e($s['price_note']) : '' ?></span><?php endif; ?>
+                                Learn more <i class="bi bi-arrow-right"></i>
+                            </span>
+                        </a>
                     </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <?php if ($hosting): ?>
+            <div class="ws-subhead reveal"><span><i class="bi bi-hdd-network me-2"></i><?= e(SiteServices::CATEGORIES['hosting']) ?></span></div>
+            <div class="row g-3">
+                <?php foreach ($hosting as $i => $s): ?>
+                    <div class="col-sm-6 col-lg-<?= count($hosting) >= 4 ? 3 : 4 ?> reveal" style="--d: <?= $i * 60 ?>ms">
+                        <a class="ws-mini" href="<?= e($serviceUrl($s)) ?>">
+                            <i class="bi bi-<?= e(SiteServices::icon($s['icon'])) ?>"></i>
+                            <span><b><?= e($s['title']) ?></b><small><?= e($s['summary']) ?></small></span>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- How we work -->
+<section class="ws-section ws-section-dark" id="process">
+    <div class="container">
+        <div class="ws-section-head reveal">
+            <span class="ws-kicker">How we work</span>
+            <h2>From idea to launch — and beyond</h2>
+            <p>A simple, transparent process, whether it is a website, an app or a marketing campaign.</p>
+        </div>
+        <div class="row g-4 ws-steps">
+            <?php foreach ($steps as $i => [$icon, $title, $text]): ?>
+                <div class="col-sm-6 col-lg-3 reveal" style="--d: <?= $i * 90 ?>ms">
+                    <div class="ws-step"><div class="d-flex align-items-center justify-content-between"><span class="ws-step-no"><?= $i + 1 ?></span><i class="bi bi-<?= e($icon) ?> ws-step-icon"></i></div><h3><?= e($title) ?></h3><p><?= e($text) ?></p></div>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -120,9 +159,9 @@ $faqs = [
 <section class="ws-section ws-section-tint" id="plans">
     <div class="container">
         <div class="ws-section-head reveal">
-            <span class="ws-kicker">Plans &amp; pricing</span>
-            <h2>Simple plans, no surprises</h2>
-            <p>Pick a plan that fits today — you can move up any time as you grow. <?= e($gstNote) ?></p>
+            <span class="ws-kicker">Hosting plans</span>
+            <h2>Reliable hosting, simple pricing</h2>
+            <p>Host your website, email and domains with us and manage everything from one client area. <?= e($gstNote) ?></p>
         </div>
         <?php if (!$plans): ?>
             <div class="ws-card text-center reveal ws-empty-plans">
@@ -132,33 +171,7 @@ $faqs = [
                 <a href="#contact" class="btn ws-btn ws-btn-primary">Get a quote</a>
             </div>
         <?php else: ?>
-            <div class="row g-4 justify-content-center">
-                <?php foreach ($plans as $i => $p): ?>
-                    <div class="col-md-6 col-lg-4 reveal" style="--d: <?= $i * 80 ?>ms">
-                        <div class="ws-plan">
-                            <div class="ws-plan-name"><?= e($p['name']) ?></div>
-                            <?php if ($p['description']): ?><p class="ws-plan-desc"><?= e($p['description']) ?></p><?php endif; ?>
-                            <div class="ws-plan-price"><span class="amount"><?= e($price($p['price'])) ?></span><span class="per">/ <?= e(strtolower(BillingCycle::label($p['billing_cycle']))) ?></span></div>
-                            <?php if ((int) $p['setup_fee'] > 0): ?><div class="ws-plan-setup">+ <?= e($price($p['setup_fee'])) ?> one-time setup</div><?php endif; ?>
-                            <a href="<?= e(url('/', ['plan' => $p['id']])) ?>#contact" class="btn ws-btn ws-btn-primary w-100 my-3">Get started</a>
-                            <ul class="ws-plan-list">
-                                <?php foreach ($planLimits as $col => $icon):
-                                    if (!array_key_exists($col, $p) || $p[$col] === '0' || $p[$col] === 0) {
-                                        continue;
-                                    }
-                                    [$label, $unit] = PlansController::LIMITS[$col]; ?>
-                                    <li><i class="bi bi-<?= e($icon) ?>"></i><span><?= e($label) ?></span><b><?= e(PlansController::limitLabel($p[$col] === null ? null : (int) $p[$col], $unit)) ?></b></li>
-                                <?php endforeach; ?>
-                            </ul>
-                            <?php if ($p['features']): ?>
-                                <ul class="ws-plan-features">
-                                    <?php foreach (array_filter(array_map('trim', explode("\n", $p['features']))) as $f): ?><li><i class="bi bi-check2"></i><?= e($f) ?></li><?php endforeach; ?>
-                                </ul>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+            <?= partial('site/plans_grid', ['plans' => $plans]) ?>
             <p class="text-center ws-muted small mt-4">Need something bigger or custom? <a href="#contact">Ask us for a quote</a>.</p>
         <?php endif; ?>
     </div>
@@ -168,16 +181,16 @@ $faqs = [
 <section class="ws-section" id="why">
     <div class="container">
         <div class="row g-4 g-lg-5 align-items-center">
-            <div class="col-lg-5 reveal">
+            <div class="col-lg-4 reveal">
                 <span class="ws-kicker">Why <?= e(brand_name()) ?></span>
-                <h2 class="ws-h2">Hosting that stays out of your way</h2>
-                <p class="ws-muted">You focus on your business. We keep your websites, domains and email running, and give you a clean panel to see and control everything yourself.</p>
-                <a href="<?= e(url('/login')) ?>" class="btn ws-btn ws-btn-outline mt-2"><i class="bi bi-person-circle me-1"></i>Open the client area</a>
+                <h2 class="ws-h2">A partner, not just a vendor</h2>
+                <p class="ws-muted">We care about what your website, app or campaign actually does for your business — more enquiries, more sales and less hassle for you.</p>
+                <a href="#contact" class="btn ws-btn ws-btn-primary mt-2">Talk to us <i class="bi bi-arrow-right ms-1"></i></a>
             </div>
-            <div class="col-lg-7">
+            <div class="col-lg-8">
                 <div class="row g-3">
                     <?php foreach ($reasons as $i => [$icon, $title, $text]): ?>
-                        <div class="col-sm-6 reveal" style="--d: <?= $i * 70 ?>ms">
+                        <div class="col-sm-6 reveal" style="--d: <?= ($i % 2) * 70 ?>ms">
                             <div class="ws-card ws-reason">
                                 <div class="ws-icon ws-icon-sm"><i class="bi bi-<?= e($icon) ?>"></i></div>
                                 <h3><?= e($title) ?></h3>
@@ -191,28 +204,13 @@ $faqs = [
     </div>
 </section>
 
-<!-- How it works -->
-<section class="ws-section ws-section-dark">
+<!-- Quick links -->
+<section class="ws-quick-wrap">
     <div class="container">
-        <div class="ws-section-head reveal">
-            <span class="ws-kicker">How it works</span>
-            <h2>Online in three easy steps</h2>
-        </div>
-        <div class="row g-4 ws-steps">
-            <?php foreach ([
-                ['Choose a plan', 'Pick a plan above or tell us what you need — we will help you choose.'],
-                ['We set it up', 'We connect your domain, create your hosting and email, and switch on SSL.'],
-                ['Manage it your way', 'Sign in to your client area to add email accounts, edit DNS, pay invoices and more.'],
-            ] as $i => [$title, $text]): ?>
-                <div class="col-md-4 reveal" style="--d: <?= $i * 90 ?>ms">
-                    <div class="ws-step"><span class="ws-step-no"><?= $i + 1 ?></span><h3><?= e($title) ?></h3><p><?= e($text) ?></p></div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-        <div class="ws-quick reveal">
-            <a href="<?= e(url('/login')) ?>"><i class="bi bi-person-circle"></i><span><b>Client area</b><small>Manage your services &amp; invoices</small></span><i class="bi bi-arrow-right"></i></a>
+        <div class="ws-quick ws-quick-light reveal">
+            <a href="<?= e(url('/login')) ?>"><i class="bi bi-person-circle"></i><span><b>Client area</b><small>Hosting, domains, email &amp; invoices</small></span><i class="bi bi-arrow-right"></i></a>
             <?php if ($webmail): ?><a href="<?= e($webmail) ?>"><i class="bi bi-envelope-open"></i><span><b>Webmail</b><small>Read your email in the browser</small></span><i class="bi bi-arrow-right"></i></a><?php endif; ?>
-            <a href="#contact"><i class="bi bi-chat-dots"></i><span><b>New here?</b><small>Tell us about your project</small></span><i class="bi bi-arrow-right"></i></a>
+            <a href="#contact"><i class="bi bi-lightbulb"></i><span><b>Have an idea?</b><small>Tell us about your project</small></span><i class="bi bi-arrow-right"></i></a>
         </div>
     </div>
 </section>
@@ -232,75 +230,4 @@ $faqs = [
     </div>
 </section>
 
-<!-- Contact -->
-<section class="ws-section ws-section-tint" id="contact">
-    <div class="container">
-        <div class="row g-4 g-lg-5">
-            <div class="col-lg-5 reveal">
-                <span class="ws-kicker">Contact</span>
-                <h2 class="ws-h2">Let’s get you online</h2>
-                <p class="ws-muted">Questions about a plan, moving your website or setting up email? Send us a message and we will reply as soon as we can.</p>
-                <div class="ws-contact-list">
-                    <?php if ($m = setting('contact.public_email')): ?><a href="mailto:<?= e($m) ?>"><i class="bi bi-envelope"></i><span><small>Email</small><?= e($m) ?></span></a><?php endif; ?>
-                    <?php if ($phone !== ''): ?><a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $phone)) ?>"><i class="bi bi-telephone"></i><span><small>Phone</small><?= e($phone) ?></span></a><?php endif; ?>
-                    <?php if ($whatsapp !== ''): ?><a href="https://wa.me/<?= e($whatsapp) ?>" rel="noopener" target="_blank"><i class="bi bi-whatsapp"></i><span><small>WhatsApp</small><?= e(setting('contact.whatsapp')) ?></span></a><?php endif; ?>
-                    <?php if ($h = setting('contact.hours')): ?><div><i class="bi bi-clock"></i><span><small>Support hours</small><?= e($h) ?></span></div><?php endif; ?>
-                    <?php $addr = trim(implode(', ', array_filter([(string) setting('company.address'), (string) setting('company.city'), (string) setting('company.postal_code')]))); ?>
-                    <?php if ($addr !== ''): ?><div><i class="bi bi-geo-alt"></i><span><small>Office</small><?= e($addr) ?></span></div><?php endif; ?>
-                </div>
-            </div>
-            <div class="col-lg-7 reveal" style="--d: 80ms">
-                <div class="ws-card ws-form-card">
-                    <?php foreach ($flashes as $f): ?>
-                        <div class="alert alert-<?= e($f['type'] === 'danger' ? 'danger' : ($f['type'] === 'success' ? 'success' : 'info')) ?> d-flex gap-2" role="alert">
-                            <i class="bi bi-<?= $f['type'] === 'success' ? 'check-circle' : 'exclamation-circle' ?>"></i><div><?= e($f['message']) ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                    <?php if (setting('site.contact_form')): ?>
-                        <form method="post" action="<?= e(url('/contact')) ?>" novalidate>
-                            <?= csrf_field() ?>
-                            <div class="ws-hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
-                            <div class="row g-3">
-                                <div class="col-sm-6"><label class="form-label" for="c_name">Your name</label><input class="form-control" id="c_name" name="name" value="<?= e(old('name')) ?>" maxlength="120" required autocomplete="name"></div>
-                                <div class="col-sm-6"><label class="form-label" for="c_email">Email</label><input class="form-control" id="c_email" type="email" name="email" value="<?= e(old('email')) ?>" maxlength="190" required autocomplete="email"></div>
-                                <div class="col-sm-6"><label class="form-label" for="c_phone">Phone <span class="ws-muted small">(optional)</span></label><input class="form-control" id="c_phone" type="tel" name="phone" value="<?= e(old('phone')) ?>" maxlength="40" autocomplete="tel"></div>
-                                <div class="col-sm-6"><label class="form-label" for="c_interest">I’m interested in</label>
-                                    <select class="form-select" id="c_interest" name="interest">
-                                        <?php $sel = (string) (old('interest') ?: $interest); ?>
-                                        <option value="">Choose…</option>
-                                        <?php if ($plans): ?><optgroup label="Plans"><?php foreach ($plans as $p): ?><option value="plan:<?= (int) $p['id'] ?>"<?= selected($sel, 'plan:' . $p['id']) ?>><?= e($p['name']) ?> plan</option><?php endforeach; ?></optgroup><?php endif; ?>
-                                        <optgroup label="Services"><?php foreach ($interests as $k => $l): ?><option value="<?= e($k) ?>"<?= selected($sel, $k) ?>><?= e($l) ?></option><?php endforeach; ?></optgroup>
-                                    </select>
-                                </div>
-                                <div class="col-12"><label class="form-label" for="c_message">How can we help?</label><textarea class="form-control" id="c_message" name="message" rows="5" maxlength="5000" required placeholder="Tell us a little about your website or business…"><?= e(old('message')) ?></textarea></div>
-                                <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-3">
-                                    <span class="ws-muted small"><i class="bi bi-lock me-1"></i>We only use your details to reply to you.</span>
-                                    <button class="btn ws-btn ws-btn-primary ws-btn-lg"><i class="bi bi-send me-1"></i>Send message</button>
-                                </div>
-                            </div>
-                        </form>
-                    <?php else: ?>
-                        <h3 class="h5">Reach us directly</h3>
-                        <p class="ws-muted mb-0">Use the email or phone details to contact our team.</p>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Call to action -->
-<section class="ws-cta-wrap">
-    <div class="container">
-        <div class="ws-cta reveal">
-            <div>
-                <h2>Ready to grow online with <?= e($siteName) ?>?</h2>
-                <p>Already a customer? Sign in to manage everything in one place.</p>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="#contact" class="btn ws-btn ws-btn-light ws-btn-lg">Get started</a>
-                <a href="<?= e(url('/login')) ?>" class="btn ws-btn ws-btn-glass ws-btn-lg"><i class="bi bi-person-circle me-1"></i>Client login</a>
-            </div>
-        </div>
-    </div>
-</section>
+<?= partial('site/contact_section', ['plans' => $plans, 'services' => $services, 'interest' => $interest, 'interests' => $interests]) ?>

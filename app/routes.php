@@ -12,6 +12,7 @@ use App\Controllers\WebmailController;
 
 $router->get('/', [HomeController::class, 'index']);
 $router->post('/contact', [HomeController::class, 'contact']);
+$router->get('/services/{slug}', [HomeController::class, 'service']);
 
 // Authentication
 $router->group('', ['auth' => 'guest'], static function ($r): void {
@@ -197,6 +198,14 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 
     $r->get('/notifications', [Admin\NotificationsController::class, 'index'], ['perm' => 'notifications.manage']);
     $r->post('/notifications/announce', [Admin\NotificationsController::class, 'announce'], ['perm' => 'notifications.manage']);
+    $r->group('/site-services', ['perm' => 'settings.manage'], static function ($r): void {
+        $r->get('', [Admin\SiteServicesController::class, 'index']);
+        $r->form('/create', [Admin\SiteServicesController::class, 'create'], [Admin\SiteServicesController::class, 'store']);
+        $r->form('/{id}/edit', [Admin\SiteServicesController::class, 'edit'], [Admin\SiteServicesController::class, 'update']);
+        $r->post('/{id}/status', [Admin\SiteServicesController::class, 'status']);
+        $r->post('/{id}/move', [Admin\SiteServicesController::class, 'move']);
+        $r->post('/{id}/delete', [Admin\SiteServicesController::class, 'destroy']);
+    });
     $r->get('/enquiries', [Admin\EnquiriesController::class, 'index'], ['perm' => 'customers.view']);
     $r->get('/enquiries/{id}', [Admin\EnquiriesController::class, 'show'], ['perm' => 'customers.view']);
     $r->post('/enquiries/{id}/status', [Admin\EnquiriesController::class, 'status'], ['perm' => 'customers.view']);

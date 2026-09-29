@@ -8,14 +8,12 @@ use App\Core\DB;
 use App\Core\Settings;
 use App\Services\AdminAlerts;
 use App\Services\Mailer;
+use App\Support\SiteServices;
 
 /** The public company website shown at the site root, and its contact form. */
 final class HomeController extends Controller
 {
     public const INTERESTS = [
-        'hosting' => 'Website hosting',
-        'domain' => 'Domain name',
-        'email' => 'Business email',
         'migration' => 'Moving an existing website',
         'other' => 'Something else',
     ];
@@ -28,19 +26,44 @@ final class HomeController extends Controller
             }
             redirect(Auth::isCustomer() ? '/customer' : '/login');
         }
-        $plans = DB::all("SELECT * FROM plans WHERE status = 'active' AND is_public = 1 ORDER BY sort_order, price, id");
-        $interest = query('plan');
-        foreach ($plans as $p) {
-            if ((string) $p['id'] === $interest) {
-                $interest = 'plan:' . $p['id'];
-            }
+        $plans = self::plans();
+        $interest = '';
+        if (ctype_digit($pid = query('plan')) && in_array((int) $pid, array_map('intval', array_column($plans, 'id')), true)) {
+            $interest = 'plan:' . $pid;
+        } elseif (($svc = query('service')) !== '' && SiteServices::findActive($svc)) {
+            $interest = 'service:' . $svc;
         }
         return $this->view('site/home', [
             'title' => (string) (Settings::get('site.name') ?: brand_name()),
             'plans' => $plans,
-            'interest' => str_starts_with($interest, 'plan:') || isset(self::INTERESTS[$interest]) ? $interest : '',
+            'services' => SiteServices::grouped(),
+            'interest' => $interest,
             'interests' => self::INTERESTS,
         ], 'layouts/site');
+    }
+
+    /** A service's own page, e.g. /services/website-design. */
+    public function service(string $slug): string
+    {
+        if (!Settings::bool('site.public_home')) {
+            abort(404);
+        }
+        $service = SiteServices::findActive($slug) ?? abort(404);
+        $all = SiteServices::active();
+        return $this->view('site/service', [
+            'title' => $service['title'],
+            'service' => $service,
+            'related' => array_slice(array_values(array_filter($all, static fn ($s) => $s['id'] !== $service['id'] && $s['category'] === $service['category'])), 0, 3),
+            'plans' => $service['category'] === 'hosting' ? self::plans() : [],
+            'services' => SiteServices::grouped(),
+            'interest' => 'service:' . $service['slug'],
+            'interests' => self::INTERESTS,
+        ], 'layouts/site');
+    }
+
+    private static function plans(): array
+    {
+        return DB::all("SELECT * FROM plans WHERE status = 'active' AND is_public = 1 ORDER BY sort_order, price, id");
     }
 
     public function contact(): string
@@ -62,7 +85,11 @@ final class HomeController extends Controller
         if (str_starts_with($interest, 'plan:') && ctype_digit($pid = substr($interest, 5))) {
             $plan = DB::value("SELECT name FROM plans WHERE id = ? AND status = 'active' AND is_public = 1", [(int) $pid]);
             $label = $plan ? 'Plan: ' . $plan : null;
+        } elseif (str_starts_with($interest, 'service:')) {
+            $svc = SiteServices::findActive(substr($interest, 8));
+            $label = $svc ? $svc['title'] : null;
         }
+        $back = input_str('back') !== '' && preg_match('#^/services/[a-z0-9-]+$#', input_str('back')) ? input_str('back') : '/';
 
         $errors = [];
         if (mb_strlen($name) < 2) {
@@ -80,7 +107,7 @@ final class HomeController extends Controller
             $errors[] = 'You have sent several messages already. Please wait a while, or contact us by email or phone.';
         }
         if ($errors) {
-            $this->failed('/#contact', $errors);
+            $this->failed($back . '#contact', $errors);
         }
 
         $id = DB::insert('enquiries', [
@@ -110,6 +137,6 @@ final class HomeController extends Controller
                 }
             });
         }
-        $this->success('/#contact', 'Thank you! We have received your message and will get back to you soon.');
+        $this->success($back . '#contact', 'Thank you! We have received your message and will get back to you soon.');
     }
 }

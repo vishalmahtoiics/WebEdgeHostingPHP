@@ -181,7 +181,9 @@ bin/migrate.php  Apply migrations
 
 ## Company website (home page)
 
-Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company website: services, plans, why us, how it works, FAQ and a contact form. The header has **Client login** (`/login`) and **Admin login** (`/admin/login`); anyone already signed in sees **Go to dashboard** instead.
+Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company website: services (website designing, app development, digital marketing, SEO, social media, branding, e-commerce, hosting, domains, email), how we work, hosting plans, why us, FAQ and a contact form.
+
+- **Services** are managed under *Communication → Website services* (Super Admin, or staff with the Settings permission): add, edit, hide, reorder or delete them, pick an icon, and optionally show a "starting from" price. Each service has its own page at `/services/<address>` with a description, what's included, how it works, related services and a contact form with that service pre-selected. The header's Services menu and the footer list them automatically. The header has **Client login** (`/login`) and **Admin login** (`/admin/login`); anyone already signed in sees **Go to dashboard** instead.
 
 - **Plans** are listed live from *Billing → Plans*, showing only active plans marked public. "Get started" opens the contact form with that plan pre-selected.
 - **Name, logo, colour, tagline, phone, WhatsApp, hours and address** come from *Settings* (Website, Branding, Company and Contact tabs). The email shown on the website is *Settings → Contact → Email shown on the website* (default `info@webedgesolution.in`), separate from the support email used for admin alerts. The headline and intro text are under *Settings → Website*.

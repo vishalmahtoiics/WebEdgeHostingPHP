@@ -38,7 +38,7 @@
 
         // Close the mobile menu after choosing a section.
         var nav = document.getElementById('wsNav');
-        document.querySelectorAll('#wsNav .nav-link[href^="#"]').forEach(function (a) {
+        document.querySelectorAll('#wsNav .nav-link[href*="#"]:not(.dropdown-toggle), #wsNav .ws-mega a').forEach(function (a) {
             a.addEventListener('click', function () {
                 if (nav && nav.classList.contains('show') && window.bootstrap) {
                     window.bootstrap.Collapse.getOrCreateInstance(nav).hide();
@@ -48,7 +48,9 @@
 
         // Highlight the menu item for the section in view.
         var links = {};
-        document.querySelectorAll('.ws-nav .nav-link[href^="#"]').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+        document.querySelectorAll('.ws-nav .nav-link[href*="#"]').forEach(function (a) {
+            links[a.getAttribute('data-spy') || a.getAttribute('href').split('#')[1]] = a;
+        });
         if ('IntersectionObserver' in window) {
             var spy = new IntersectionObserver(function (entries) {
                 entries.forEach(function (en) {

@@ -10,7 +10,11 @@ $siteName = (string) (setting('site.name') ?: brand_name());
 $tagline = (string) setting('site.tagline');
 $dashboard = Auth::isAdmin() ? '/admin' : (Auth::isCustomer() ? '/customer' : null);
 $webmail = setting('webmail.enabled') ? url('/mails') : null;
-$nav = ['#services' => 'Services', '#plans' => 'Plans', '#why' => 'Why us', '#faq' => 'FAQ', '#contact' => 'Contact'];
+$home = url('/');
+$nav = ['#plans' => 'Hosting', '#why' => 'Why us', '#faq' => 'FAQ', '#contact' => 'Contact'];
+$menuServices = App\Support\SiteServices::grouped();
+$pageTitle = isset($service) ? $service['title'] . ' · ' . $siteName : $siteName . ($tagline ? ' — ' . $tagline : '');
+$pageDesc = isset($service) ? $service['summary'] : ($tagline ?: $siteName);
 $logoMark = static function (string $cls = '') use ($siteName): string {
     if ($logo = logo_url()) {
         return '<img src="' . e($logo) . '" alt="' . e($siteName) . '" class="ws-logo-img ' . $cls . '">';
@@ -23,10 +27,10 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= e($siteName . ($tagline ? ' — ' . $tagline : '')) ?></title>
-    <meta name="description" content="<?= e($tagline ?: $siteName) ?>">
-    <meta property="og:title" content="<?= e($siteName) ?>">
-    <meta property="og:description" content="<?= e($tagline ?: $siteName) ?>">
+    <title><?= e($pageTitle) ?></title>
+    <meta name="description" content="<?= e($pageDesc) ?>">
+    <meta property="og:title" content="<?= e($pageTitle) ?>">
+    <meta property="og:description" content="<?= e($pageDesc) ?>">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="<?= e($primary) ?>">
     <?php if ($favicon !== ''): ?><link rel="icon" href="<?= e(url($favicon)) ?>"><?php endif; ?>
@@ -48,8 +52,22 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
             </button>
             <div class="collapse navbar-collapse" id="wsNav">
                 <ul class="navbar-nav mx-auto ws-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="<?= e($home) ?>#services" data-spy="services" role="button" data-bs-toggle="dropdown" aria-expanded="false">Services</a>
+                        <div class="dropdown-menu ws-mega">
+                            <?php foreach (App\Support\SiteServices::CATEGORIES as $cat => $catLabel): if (empty($menuServices[$cat])) { continue; } ?>
+                                <div class="ws-mega-col">
+                                    <div class="ws-mega-title"><?= e($catLabel) ?></div>
+                                    <?php foreach ($menuServices[$cat] as $ms): ?>
+                                        <a class="ws-mega-item" href="<?= e(url('/services/' . $ms['slug'])) ?>"><i class="bi bi-<?= e(App\Support\SiteServices::icon($ms['icon'])) ?>"></i><span><?= e($ms['title']) ?></span></a>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endforeach; ?>
+                            <a class="ws-mega-all" href="<?= e($home) ?>#services">All services <i class="bi bi-arrow-right"></i></a>
+                        </div>
+                    </li>
                     <?php foreach ($nav as $href => $label): ?>
-                        <li class="nav-item"><a class="nav-link" href="<?= e($href) ?>"><?= e($label) ?></a></li>
+                        <li class="nav-item"><a class="nav-link" href="<?= e($home . $href) ?>"><?= e($label) ?></a></li>
                     <?php endforeach; ?>
                     <?php if ($webmail): ?><li class="nav-item"><a class="nav-link" href="<?= e($webmail) ?>"><i class="bi bi-envelope me-1"></i>Webmail</a></li><?php endif; ?>
                 </ul>
@@ -79,13 +97,17 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
                 <a class="ws-brand ws-brand-light" href="<?= e(url('/')) ?>"><?= $logoMark() ?></a>
                 <?php if ($tagline): ?><p class="ws-footer-text mt-3"><?= e($tagline) ?></p><?php endif; ?>
             </div>
-            <div class="col-6 col-lg-2">
-                <div class="ws-footer-title">Explore</div>
+            <div class="col-6 col-lg-3">
+                <div class="ws-footer-title"><?= !empty($menuServices['digital']) ? 'Services' : 'Explore' ?></div>
                 <ul class="ws-footer-links">
-                    <?php foreach ($nav as $href => $label): ?><li><a href="<?= e($href) ?>"><?= e($label) ?></a></li><?php endforeach; ?>
+                    <?php if (!empty($menuServices['digital'])): ?>
+                        <?php foreach (array_slice($menuServices['digital'], 0, 6) as $ms): ?><li><a href="<?= e(url('/services/' . $ms['slug'])) ?>"><?= e($ms['title']) ?></a></li><?php endforeach; ?>
+                    <?php else: ?>
+                        <?php foreach ($nav as $href => $label): ?><li><a href="<?= e($home . $href) ?>"><?= e($label) ?></a></li><?php endforeach; ?>
+                    <?php endif; ?>
                 </ul>
             </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg-2">
                 <div class="ws-footer-title">Sign in</div>
                 <ul class="ws-footer-links">
                     <li><a href="<?= e(url('/login')) ?>">Client area</a></li>
