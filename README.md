@@ -9,7 +9,7 @@ The platform is being built in three phases.
 | Phase | Scope | Status |
 |---|---|---|
 | **1. Core platform** | Admin & customer panels, authentication, customers, customer users, roles & permissions, plans, subscriptions, renewals, GST invoices, credit notes, payments, notifications, activity & security logs, white-label settings, search & filters, responsive UI | ✅ Done |
-| **2. Hosting** | Provider accounts (Hostinger API), resource discovery & claiming, domains, DNS, websites, databases, SSL | ✅ Done |
+| **2. Hosting** | Provider accounts (Hostinger API), resource discovery & automatic import, domains, DNS, websites, databases, SSL | ✅ Done |
 | **3. Email & files** | Email domains, mailboxes, aliases, routing trace, file manager, code editor | ✅ Done |
 | **Online payments** | Razorpay checkout on customer invoices, webhook reconciliation, admin review queue | ✅ Done |
 
@@ -115,8 +115,8 @@ bin/migrate.php  Apply migrations
 **Connecting Hostinger**
 1. In hPanel go to **Account → API** and create an API token (a dedicated one for this panel).
 2. In WebEdge, open **Providers → Add provider account**, choose *Hostinger* and paste the token. The connection is tested straight away.
-3. Click **Sync resources**. Everything the token can see appears under **Discovered resources**: domains, websites, hosting accounts and plans, databases and VPS.
-4. **Claim** each resource and optionally assign it to a customer. Claiming a website can also claim its domain and databases. A claimed domain loads its live DNS zone.
+3. Click **Sync & add all**. A full-screen loading screen shows while the panel fetches everything the token can see: domains, websites, hosting accounts and plans, databases, email and VPS.
+4. New domains, websites, databases and email domains (with their mailboxes and aliases) are **added to the panel automatically**, unassigned. Websites are linked to their domains and databases. Open any of them to assign it to a customer. A few items stay under **Discovered resources** to claim by hand: VPS (they need a customer), and anything whose name is already used in the panel (reported once after the sync). Items you remove from the panel are not added back by later syncs, but you can still claim them manually. To go back to claiming everything by hand, turn off *Add everything found by a sync to the panel automatically* under **Settings → Provider**.
 5. The cron job re-syncs automatically (every 6 hours by default, see **Settings → Provider**). Resources that disappear at the provider are flagged as *missing*.
 
 **What each area does**

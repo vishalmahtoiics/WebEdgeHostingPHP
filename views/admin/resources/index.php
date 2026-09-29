@@ -3,7 +3,7 @@ use App\Services\ProviderSyncService;
 
 $canClaim = can('domains.manage') || can('websites.manage') || can('databases.manage') || can('email.manage');
 ?>
-<p class="text-muted small">Everything the provider accounts can see. Claim a resource to bring it into the panel and assign it to a customer.</p>
+<p class="text-muted small">Everything the provider accounts can see. <?= setting('provider.auto_import') ? 'Sync adds new domains, websites, databases and email domains to the panel automatically; open one to assign it to a customer. Anything still marked <em>Discovered</em> (VPS, or a name already used in the panel) can be claimed here.' : 'Claim a resource to bring it into the panel and assign it to a customer.' ?></p>
 <form class="we-filters row g-2 align-items-end" method="get">
     <div class="col-12 col-md-3"><label class="form-label small mb-1" for="q">Search</label><input class="form-control" id="q" name="q" value="<?= e(query('q')) ?>" placeholder="Domain, name or ID"></div>
     <div class="col-6 col-md-3"><label class="form-label small mb-1" for="provider">Provider account</label>

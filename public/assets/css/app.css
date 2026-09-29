@@ -156,3 +156,13 @@ a { color: var(--we-primary); }
     .we-auth-card { padding: 1.5rem 1.1rem; }
     .we-stat-value { font-size: 1.2rem; }
 }
+
+/* Full-screen loading overlay (long actions such as provider sync) */
+.we-loading { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px); animation: we-fade .2s ease-out; }
+.we-loading-card { width: 100%; max-width: 420px; background: var(--bs-body-bg, #fff); border-radius: 16px; padding: 32px 28px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
+.we-loading-spinner { width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 50%; border: 5px solid rgba(37, 99, 235, .15); border-top-color: var(--we-primary, #2563eb); animation: we-spin .8s linear infinite; }
+.we-loading .progress-bar { background-color: var(--we-primary, #2563eb); transition: width .5s ease; }
+body.we-loading-open { overflow: hidden; }
+@keyframes we-spin { to { transform: rotate(360deg); } }
+@keyframes we-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .we-loading-spinner { animation-duration: 2.4s; } .we-loading { animation: none; } }

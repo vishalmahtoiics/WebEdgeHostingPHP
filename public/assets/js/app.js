@@ -10,11 +10,48 @@
             e.preventDefault();
             return;
         }
+        // Full-screen loading overlay for long actions: <form data-loading="Title" data-loading-text="Details">
+        if (form.hasAttribute('data-loading')) {
+            showLoading(form.getAttribute('data-loading'), form.getAttribute('data-loading-text') || '');
+        }
         // Prevent double submission.
         var btns = form.querySelectorAll('button[type=submit], button:not([type])');
         window.setTimeout(function () {
             btns.forEach(function (b) { b.disabled = true; });
         }, 0);
+    });
+
+    function showLoading(title, text) {
+        if (document.getElementById('we-loading')) return;
+        var steps = ['Connecting to the provider', 'Fetching domains and websites', 'Fetching databases and email', 'Adding everything to the panel', 'Almost done'];
+        var box = document.createElement('div');
+        box.id = 'we-loading';
+        box.className = 'we-loading';
+        box.setAttribute('role', 'alert');
+        box.setAttribute('aria-live', 'assertive');
+        box.innerHTML = '<div class="we-loading-card"><div class="we-loading-spinner" aria-hidden="true"></div>' +
+            '<div class="h5 mb-1 we-loading-title"></div><div class="small text-muted mb-3 we-loading-text"></div>' +
+            '<div class="progress mb-2" style="height:6px"><div class="progress-bar progress-bar-striped progress-bar-animated we-loading-bar" style="width:5%"></div></div>' +
+            '<div class="small fw-medium we-loading-step"></div><div class="small text-muted we-loading-time">0s</div></div>';
+        box.querySelector('.we-loading-title').textContent = title;
+        box.querySelector('.we-loading-text').textContent = text;
+        document.body.appendChild(box);
+        document.body.classList.add('we-loading-open');
+        var started = Date.now(), bar = box.querySelector('.we-loading-bar'), step = box.querySelector('.we-loading-step'), time = box.querySelector('.we-loading-time');
+        var tick = function () {
+            var s = Math.floor((Date.now() - started) / 1000);
+            // The server does not report progress, so ease towards 95% and let the page load finish it.
+            bar.style.width = Math.min(95, 5 + 90 * (1 - Math.exp(-s / 25))) + '%';
+            step.textContent = steps[Math.min(steps.length - 1, Math.floor(s / 6))] + '…';
+            time.textContent = s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+        };
+        tick();
+        window.setInterval(tick, 500);
+    }
+    // Returning with the back button restores the page from cache: drop a stale overlay.
+    window.addEventListener('pageshow', function (e) {
+        var el = document.getElementById('we-loading');
+        if (e.persisted && el) { el.remove(); document.body.classList.remove('we-loading-open'); }
     });
 
     // Print buttons.

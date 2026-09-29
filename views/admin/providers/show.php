@@ -14,7 +14,7 @@ $manage = can('providers.manage');
     <?php if ($manage): ?>
         <div class="d-flex flex-wrap gap-2">
             <?php if ($p['is_enabled'] && $p['driver'] !== 'manual'): ?>
-                <form method="post" action="<?= e(url('/admin/providers/' . $p['id'] . '/sync')) ?>"><?= csrf_field() ?><button class="btn btn-primary"><i class="bi bi-arrow-repeat me-1"></i>Sync resources</button></form>
+                <form method="post" action="<?= e(url('/admin/providers/' . $p['id'] . '/sync')) ?>" data-loading="Syncing with the provider…" data-loading-text="Fetching domains, websites, databases and email, then adding everything to the panel. This can take a minute or two, please keep this page open."><?= csrf_field() ?><button class="btn btn-primary"><i class="bi bi-arrow-repeat me-1"></i>Sync &amp; add all</button></form>
                 <form method="post" action="<?= e(url('/admin/providers/' . $p['id'] . '/test')) ?>"><?= csrf_field() ?><button class="btn btn-light"><i class="bi bi-plug me-1"></i>Test connection</button></form>
             <?php endif; ?>
             <a class="btn btn-light" href="<?= e(url('/admin/providers/' . $p['id'] . '/edit')) ?>"><i class="bi bi-pencil me-1"></i>Edit</a>

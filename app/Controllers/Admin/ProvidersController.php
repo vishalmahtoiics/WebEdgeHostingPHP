@@ -123,12 +123,22 @@ final class ProvidersController extends Controller
     public function sync(int $id): string
     {
         $this->requireFound(DB::one('SELECT id FROM providers WHERE id = ?', [$id]));
+        // Discovery + importing a large account can take a while.
+        @set_time_limit(600);
+        ignore_user_abort(true);
         try {
             $c = ProviderSyncService::sync($id);
         } catch (ProviderException $e) {
             $this->failed("/admin/providers/$id", ['Sync failed: ' . $e->getMessage()]);
         }
-        $this->success("/admin/resources?provider=$id", sprintf('Sync complete: %d resources (%d new, %d missing).', $c['total'], $c['new'], $c['missing']));
+        $msg = sprintf('Sync complete: %d resources found, %d added to the panel.', $c['total'], $c['imported']);
+        if ($c['missing'] > 0) {
+            $msg .= sprintf(' %d no longer exist at the provider.', $c['missing']);
+        }
+        if ($c['failed'] > 0) {
+            flash('warning', sprintf('%d resource(s) could not be added automatically (usually a name already used in the panel). Add them from the list below.', $c['failed']));
+        }
+        $this->success("/admin/resources?provider=$id", $msg);
     }
 
     public function toggle(int $id): string

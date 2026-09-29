@@ -5,6 +5,7 @@ namespace App\Services;
 
 use App\Core\DB;
 use App\Core\Logger;
+use App\Core\Settings;
 use App\Providers\ProviderException;
 use App\Providers\ProviderManager;
 
@@ -84,6 +85,8 @@ final class ProviderSyncService
             self::refreshLocal($providerId);
         });
 
+        $imported = Settings::bool('provider.auto_import') ? self::autoImport($providerId) : ['imported' => 0, 'failed' => 0];
+
         // Refresh mailboxes/aliases for claimed email domains (outside the transaction: API calls).
         foreach (DB::column("SELECT local_id FROM provider_resources WHERE provider_id = ? AND type = 'mail_order' AND local_type = 'email_domain' AND is_missing = 0", [$providerId]) as $emailDomainId) {
             try {
@@ -93,13 +96,57 @@ final class ProviderSyncService
             }
         }
 
-        $summary = sprintf('%d resources: %d new, %d missing', count($resources), $counts['new'], $counts['missing']);
+        $summary = sprintf('%d resources: %d new, %d added to panel, %d missing', count($resources), $counts['new'], $imported['imported'], $counts['missing']);
+        if ($imported['failed'] > 0) {
+            $summary .= sprintf(', %d could not be added', $imported['failed']);
+        }
         DB::update('providers', [
             'status' => 'ok', 'last_error' => null, 'last_checked_at' => now(), 'last_sync_at' => now(),
             'sync_summary' => $summary, 'updated_at' => now(),
         ], 'id = ?', [$providerId]);
         Logger::activity('providers', 'sync', "Synced provider account \"{$p['label']}\": $summary", 'provider', $providerId);
-        return $counts + ['total' => count($resources)];
+        return $counts + $imported + ['total' => count($resources)];
+    }
+
+    /** Resource types added to the panel automatically, in dependency order. */
+    private const AUTO_IMPORT_ORDER = ['domain', 'website', 'database', 'mail_order'];
+
+    /**
+     * Add every unclaimed resource to the panel, unassigned. Domains go first so
+     * websites link to them; claiming a website also claims its databases.
+     * One failing resource never stops the rest.
+     *
+     * @return array{imported: int, failed: int}
+     */
+    public static function autoImport(int $providerId): array
+    {
+        $imported = $failed = 0;
+        foreach (self::AUTO_IMPORT_ORDER as $type) {
+            $ids = DB::column(
+                'SELECT id FROM provider_resources WHERE provider_id = ? AND type = ? AND local_id IS NULL AND is_missing = 0 AND auto_import = 1 ORDER BY name',
+                [$providerId, $type]
+            );
+            foreach ($ids as $id) {
+                // An earlier claim (a website with its databases) may already have taken it.
+                if (DB::value('SELECT local_id FROM provider_resources WHERE id = ?', [$id]) !== null) {
+                    continue;
+                }
+                $before = (int) DB::value('SELECT COUNT(*) FROM provider_resources WHERE provider_id = ? AND local_id IS NOT NULL', [$providerId]);
+                try {
+                    self::claim((int) $id, null, true);
+                    $imported += (int) DB::value('SELECT COUNT(*) FROM provider_resources WHERE provider_id = ? AND local_id IS NOT NULL', [$providerId]) - $before;
+                } catch (\Throwable $e) {
+                    $failed++;
+                    // Report it once; it stays in Discovered resources for a manual decision.
+                    DB::run('UPDATE provider_resources SET auto_import = 0 WHERE id = ?', [$id]);
+                    error_log("Auto-import of provider resource #$id failed: " . $e->getMessage());
+                }
+            }
+        }
+        if ($imported > 0) {
+            Logger::activity('providers', 'auto_import', "Added $imported synced resource(s) to the panel", 'provider', $providerId);
+        }
+        return ['imported' => $imported, 'failed' => $failed];
     }
 
     /** Copy fresh provider data onto claimed local records. */
@@ -161,7 +208,8 @@ final class ProviderSyncService
 
     public static function release(string $localType, int $localId): void
     {
-        DB::run('UPDATE provider_resources SET local_type = NULL, local_id = NULL WHERE local_type = ? AND local_id = ?', [$localType, $localId]);
+        // Removed from the panel on purpose: later syncs must not add it back automatically.
+        DB::run('UPDATE provider_resources SET local_type = NULL, local_id = NULL, auto_import = 0 WHERE local_type = ? AND local_id = ?', [$localType, $localId]);
     }
 
     /**

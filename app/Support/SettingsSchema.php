@@ -116,6 +116,7 @@ final class SettingsSchema
                 'fields' => [
                     'provider.api_timeout' => ['label' => 'Provider API timeout (seconds)', 'type' => 'number', 'default' => '30'],
                     'provider.auto_sync' => ['label' => 'Sync provider resources during cron', 'type' => 'bool', 'default' => '1'],
+                    'provider.auto_import' => ['label' => 'Add everything found by a sync to the panel automatically', 'type' => 'bool', 'default' => '1', 'help' => 'New domains, websites, databases and email domains are added unassigned; assign them to customers afterwards. Items you remove from the panel are not re-added. VPS still need to be assigned from Discovered resources.'],
                     'provider.sync_interval_hours' => ['label' => 'Automatic sync interval (hours)', 'type' => 'number', 'default' => '6'],
                     'provider.ssl_expiring_days' => ['label' => 'Mark SSL as "expiring soon" within (days)', 'type' => 'number', 'default' => '30'],
                     'mail.expected_mx' => ['label' => 'Expected MX hosts for customer email (comma separated, optional)', 'type' => 'text', 'default' => '', 'help' => 'Used by "Verify domain". Leave empty to accept any MX record.'],
