@@ -26,7 +26,7 @@
                     <td><a class="fw-medium" href="<?= e(url('/admin/email/' . $d['id'])) ?>"><?= e($d['name']) ?></a></td>
                     <td><?= partial('partials/source_badge', ['source' => $d['source']]) ?></td>
                     <td class="small"><?= $d['customer_id'] ? e($d['customer_name']) : '<span class="badge text-bg-light border">Unassigned</span>' ?></td>
-                    <td><?= (int) $d['mailbox_count'] ?></td>
+                    <td><?= (int) $d['mailbox_count'] ?><?= ($d['max_mailboxes'] ?? null) !== null ? ' <span class="text-muted">/ ' . (int) $d['max_mailboxes'] . '</span>' : '' ?></td>
                     <td><?= (int) $d['alias_count'] ?></td>
                     <td class="small"><?= $d['verified_at'] ? '<i class="bi bi-check-circle text-success"></i> ' . e(fmt_date($d['verified_at'])) : '<span class="text-muted">—</span>' ?></td>
                     <td><?= status_badge($d['status']) ?></td>

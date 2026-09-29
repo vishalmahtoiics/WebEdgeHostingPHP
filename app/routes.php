@@ -121,6 +121,7 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
         $r->post('/{id}/assign', [Admin\EmailController::class, 'assign']);
         $r->post('/{id}/import', [Admin\EmailController::class, 'import']);
         $r->post('/{id}/servers', [Admin\EmailController::class, 'servers']);
+        $r->post('/{id}/limit', [Admin\EmailController::class, 'limit']);
         $r->post('/{id}/delete', [Admin\EmailController::class, 'destroy']);
         $r->post('/{id}/mailboxes', [Admin\EmailController::class, 'storeMailbox']);
         $r->post('/{id}/mailboxes/{mid}', [Admin\EmailController::class, 'updateMailbox']);

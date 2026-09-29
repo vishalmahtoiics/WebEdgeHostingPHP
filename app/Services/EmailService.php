@@ -234,6 +234,23 @@ final class EmailService
 
     // ---- Mailboxes ----------------------------------------------------------
 
+    /**
+     * The email account limit that applies to a domain, for display:
+     * its own limit if set, otherwise the customer's or plan's.
+     * @return array{limit: ?int, used: int, source: string}|null
+     */
+    public static function mailboxAllowance(array $domain): ?array
+    {
+        if (($domain['max_mailboxes'] ?? null) !== null) {
+            return ['limit' => (int) $domain['max_mailboxes'], 'used' => (int) DB::value('SELECT COUNT(*) FROM mailboxes WHERE email_domain_id = ?', [$domain['id']]), 'source' => 'domain'];
+        }
+        if (!$domain['customer_id']) {
+            return null;
+        }
+        $s = PlanLimits::summary((int) $domain['customer_id'])['mailboxes'];
+        return ['limit' => $s['limit'], 'used' => $s['used'], 'source' => !empty($s['custom']) ? 'customer' : 'plan'];
+    }
+
     public static function createMailbox(int $domainId, string $local, string $password, ?int $quotaMb, ?string $displayName, bool $enforcePlan): int
     {
         $d = self::domain($domainId);
@@ -250,7 +267,15 @@ final class EmailService
             throw new InvalidArgumentException($problem);
         }
         $quotaMb = self::checkQuota($d, $quotaMb, $enforcePlan);
-        if ($enforcePlan && $d['customer_id'] && !PlanLimits::allows((int) $d['customer_id'], 'mailboxes')) {
+        if ($enforcePlan && ($d['max_mailboxes'] ?? null) !== null) {
+            // This domain has its own limit (set by a Super Admin): it replaces the plan limit here.
+            $lim = (int) $d['max_mailboxes'];
+            if ((int) DB::value('SELECT COUNT(*) FROM mailboxes WHERE email_domain_id = ?', [$domainId]) >= $lim) {
+                throw new RuntimeException($lim === 0
+                    ? "Email accounts are not available on {$d['name']}. Please contact support."
+                    : "You can create only $lim email account" . ($lim === 1 ? '' : 's') . " on {$d['name']}, and all are in use. Please contact support if you need more.");
+            }
+        } elseif ($enforcePlan && $d['customer_id'] && !PlanLimits::allows((int) $d['customer_id'], 'mailboxes')) {
             $lim = (int) (PlanLimits::summary((int) $d['customer_id'])['mailboxes']['limit'] ?? 0);
             throw new RuntimeException($lim === 0
                 ? 'Your plan does not include email accounts yet. Please contact support.'

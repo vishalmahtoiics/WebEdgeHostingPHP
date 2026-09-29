@@ -45,6 +45,7 @@ abstract class EmailController extends Controller
             'mailboxes' => $mailboxes,
             'aliases' => $aliases,
             'usage' => $usage,
+            'allowance' => EmailService::mailboxAllowance($d),
             'base' => $this->domainPath($id),
             'isAdmin' => $this->isAdmin(),
             'canEdit' => $this->canEdit($d),

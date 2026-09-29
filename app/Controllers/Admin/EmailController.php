@@ -212,4 +212,24 @@ final class EmailController extends BaseEmailController
         \App\Core\Logger::activity('email', 'mail_servers', "Updated mail server settings for {$d['name']}", 'email_domain', $id, $d['customer_id'] ? (int) $d['customer_id'] : null);
         $this->success("/admin/email/$id", 'Mail server settings saved. Webmail sign-ins for this domain use them from now on.');
     }
+
+    /** Super Admin: how many email accounts this domain may have (empty = customer/plan limit). */
+    public function limit(int $id): string
+    {
+        if (!\App\Core\Auth::isSuper()) {
+            abort(403, 'Only a Super Admin can change email limits.');
+        }
+        $d = $this->emailDomain($id);
+        $v = trim(input_str('max_mailboxes'));
+        if ($v !== '' && (!ctype_digit($v) || (int) $v > 100000)) {
+            $this->failed("/admin/email/$id", ['Enter a whole number, or leave it empty to use the customer\'s plan limit.']);
+        }
+        $limit = $v === '' ? null : (int) $v;
+        DB::update('email_domains', ['max_mailboxes' => $limit, 'updated_at' => now()], 'id = ?', [$id]);
+        \App\Core\Logger::activity('email', 'limit', "Email account limit for {$d['name']}: " . ($limit === null ? 'plan limit' : $limit), 'email_domain', $id, $d['customer_id'] ? (int) $d['customer_id'] : null);
+        $used = (int) DB::value('SELECT COUNT(*) FROM mailboxes WHERE email_domain_id = ?', [$id]);
+        $this->success("/admin/email/$id", $limit === null
+            ? "{$d['name']} now uses the customer's plan limit."
+            : "{$d['name']} can have $limit email account" . ($limit === 1 ? '' : 's') . ": $used used, " . max(0, $limit - $used) . ' left.');
+    }
 }

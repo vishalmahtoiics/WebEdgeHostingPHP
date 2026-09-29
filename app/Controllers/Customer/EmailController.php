@@ -37,7 +37,7 @@ final class EmailController extends BaseEmailController
         return $this->view('customer/email', [
             'title' => 'Email',
             'domains' => DB::all(
-                "SELECT e.id, e.name, e.status,
+                "SELECT e.id, e.name, e.status, e.max_mailboxes,
                     (SELECT COUNT(*) FROM mailboxes m WHERE m.email_domain_id = e.id) AS mailbox_count,
                     (SELECT COUNT(*) FROM email_aliases a WHERE a.email_domain_id = e.id) AS alias_count
                  FROM email_domains e WHERE e.customer_id = ? ORDER BY e.name",

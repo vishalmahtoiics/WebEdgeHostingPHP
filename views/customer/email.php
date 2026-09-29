@@ -12,7 +12,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2"><div class="we-stat-icon"><i class="bi bi-envelope"></i></div><?= status_badge($d['status']) ?></div>
                     <div class="fw-semibold text-truncate"><?= e($d['name']) ?></div>
-                    <div class="small text-muted"><?= (int) $d['mailbox_count'] ?> mailbox<?= (int) $d['mailbox_count'] === 1 ? '' : 'es' ?> · <?= (int) $d['alias_count'] ?> alias<?= (int) $d['alias_count'] === 1 ? '' : 'es' ?></div>
+                    <div class="small text-muted"><?= (int) $d['mailbox_count'] ?><?= ($d['max_mailboxes'] ?? null) !== null ? ' of ' . (int) $d['max_mailboxes'] : '' ?> mailbox<?= (int) $d['mailbox_count'] === 1 ? '' : 'es' ?> · <?= (int) $d['alias_count'] ?> alias<?= (int) $d['alias_count'] === 1 ? '' : 'es' ?></div>
                 </div>
             </a>
         </div>

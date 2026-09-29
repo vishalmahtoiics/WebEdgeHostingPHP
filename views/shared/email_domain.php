@@ -2,7 +2,8 @@
 $d = $domain;
 $mbLimit = $usage['mailboxes'] ?? null;
 $alLimit = $usage['aliases'] ?? null;
-$mbFull = $mbLimit && $mbLimit['limit'] !== null && $mbLimit['used'] >= $mbLimit['limit'] && !$isAdmin;
+$al = $allowance ?? null;
+$mbFull = $al && $al['limit'] !== null && $al['used'] >= $al['limit'] && !$isAdmin;
 $alFull = $alLimit && $alLimit['limit'] !== null && $alLimit['used'] >= $alLimit['limit'] && !$isAdmin;
 $mailboxAddresses = array_column($mailboxes, 'address');
 $aliasAddresses = array_column($aliases, 'address');
@@ -43,23 +44,24 @@ $aliasAddresses = array_column($aliases, 'address');
 <?php if (!$isAdmin && $d['status'] === 'pending'): ?>
     <div class="alert alert-light border small d-flex gap-2"><i class="bi bi-hourglass-split"></i><span>This domain is not verified yet. You can create email accounts now; mail starts arriving once the domain's MX records point to our mail servers.</span></div>
 <?php endif; ?>
-<?php if ($mbLimit && $mbLimit['limit'] !== null):
-    $left = max(0, $mbLimit['limit'] - $mbLimit['used']); ?>
+<?php if ($al && $al['limit'] !== null):
+    $left = max(0, $al['limit'] - $al['used']);
+    $where = $al['source'] === 'domain' ? ' on <strong>' . e($d['name']) . '</strong>' : ' on your plan'; ?>
     <?php if ($isAdmin): ?>
-        <div class="small text-muted mb-2"><i class="bi bi-sliders me-1"></i>Customer can create <?= (int) $mbLimit['limit'] ?> email account<?= $mbLimit['limit'] === 1 ? '' : 's' ?> (<?= !empty($mbLimit['custom']) ? 'set on the customer' : 'from their plan' ?>) · <?= (int) $mbLimit['used'] ?> used</div>
-    <?php elseif ((int) $mbLimit['limit'] === 0): ?>
-        <div class="alert alert-info small d-flex gap-2"><i class="bi bi-info-circle"></i><span>Your plan does not include email accounts yet. Please contact support to add them.</span></div>
+        <div class="small text-muted mb-2"><i class="bi bi-sliders me-1"></i>Email accounts: <?= (int) $al['used'] ?> of <?= (int) $al['limit'] ?> used, <?= $left ?> left (<?= ['domain' => 'limit set on this domain', 'customer' => 'limit set on the customer', 'plan' => "from the customer's plan"][$al['source']] ?>)</div>
+    <?php elseif ((int) $al['limit'] === 0): ?>
+        <div class="alert alert-info small d-flex gap-2"><i class="bi bi-info-circle"></i><span>Email accounts are not included<?= $where ?> yet. Please contact support to add them.</span></div>
     <?php elseif ($left === 0): ?>
-        <div class="alert alert-warning small d-flex gap-2"><i class="bi bi-exclamation-circle"></i><span>You have used all <strong><?= (int) $mbLimit['limit'] ?></strong> email accounts on your plan. Please contact support if you need more.</span></div>
+        <div class="alert alert-warning small d-flex gap-2"><i class="bi bi-exclamation-circle"></i><span>You have used all <strong><?= (int) $al['limit'] ?></strong> email accounts<?= $where ?>. Please contact support if you need more.</span></div>
     <?php else: ?>
-        <div class="alert alert-info small d-flex gap-2"><i class="bi bi-envelope-plus"></i><span>You can create up to <strong><?= (int) $mbLimit['limit'] ?></strong> email account<?= $mbLimit['limit'] === 1 ? '' : 's' ?> on your plan: <?= (int) $mbLimit['used'] ?> used, <strong><?= $left ?></strong> left.</span></div>
+        <div class="alert alert-info small d-flex gap-2"><i class="bi bi-envelope-plus"></i><span>You can create <strong><?= $left ?></strong> more email account<?= $left === 1 ? '' : 's' ?><?= $where ?> (<?= (int) $al['used'] ?> of <?= (int) $al['limit'] ?> used).</span></div>
     <?php endif; ?>
 <?php endif; ?>
 <div class="row g-3">
     <div class="col-xl-8">
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Mailboxes<?php if ($mbLimit && !$isAdmin): ?> <span class="small text-muted fw-normal">· <?= (int) $mbLimit['used'] ?> of <?= $mbLimit['limit'] === null ? 'unlimited' : (int) $mbLimit['limit'] ?> in your plan</span><?php endif; ?></span>
+                <span>Mailboxes<?php if ($al && !$isAdmin): ?> <span class="small text-muted fw-normal">· <?= (int) $al['used'] ?> of <?= $al['limit'] === null ? 'unlimited' : (int) $al['limit'] ?></span><?php endif; ?></span>
                 <?php if ($canEdit && !$mbFull): ?><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newMailbox"><i class="bi bi-plus-lg"></i> New mailbox</button><?php endif; ?>
             </div>
             <?php if (!$mailboxes): ?>
@@ -159,6 +161,20 @@ $aliasAddresses = array_column($aliases, 'address');
                     <?php if ($settings['webmail']): ?><a class="btn btn-sm btn-outline-primary mt-2" href="<?= e($settings['webmail']) ?>" target="_blank" rel="noopener">Open webmail</a><?php endif; ?>
                 </div>
             </div>
+        <?php endif; ?>
+        <?php if ($isAdmin && \App\Core\Auth::isSuper()): ?>
+            <form method="post" action="<?= e(url($base . '/limit')) ?>" class="card mb-3">
+                <?= csrf_field() ?>
+                <div class="card-header">Email account limit <span class="small text-muted fw-normal">(Super Admin)</span></div>
+                <div class="card-body small">
+                    <label class="form-label" for="max_mailboxes">How many email accounts can <?= e($d['name']) ?> have?</label>
+                    <div class="input-group">
+                        <input class="form-control" id="max_mailboxes" name="max_mailboxes" inputmode="numeric" value="<?= e((string) ($d['max_mailboxes'] ?? '')) ?>" placeholder="Use the customer's plan limit">
+                        <button class="btn btn-primary">Save</button>
+                    </div>
+                    <div class="form-text">For example 10: with 3 already created, the customer sees "You can create 7 more email accounts". Leave empty to use the customer's or plan's limit.</div>
+                </div>
+            </form>
         <?php endif; ?>
         <?php if ($isAdmin && can('email.manage') && can('providers.view')): ?>
             <form method="post" action="<?= e(url($base . '/servers')) ?>" class="card mb-3" autocomplete="off">
