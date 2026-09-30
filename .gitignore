@@ -13,3 +13,4 @@
 .DS_Store
 /screenshots/
 /storage/tmp/
+/public/uploads/blog/*
