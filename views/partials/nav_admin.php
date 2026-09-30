@@ -30,6 +30,7 @@ $sections = [
         ['Notifications', 'megaphone', '/admin/notifications', 'notifications.manage'],
         ['Website enquiries', 'chat-left-text', '/admin/enquiries', 'customers.view'],
         ['Website services', 'grid-1x2', '/admin/site-services', 'settings.manage'],
+        ['Blog posts', 'journal-richtext', '/admin/blog', 'blog.manage'],
     ],
     'Logs' => [
         ['Activity logs', 'clock-history', '/admin/activity', 'activities.view'],

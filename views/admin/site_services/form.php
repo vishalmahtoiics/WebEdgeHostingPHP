@@ -20,6 +20,14 @@ $icon = (string) $v('icon', 'stars');
                 <div class="col-12"><label class="form-label" for="summary">Short summary</label><input class="form-control" id="summary" name="summary" value="<?= e($v('summary')) ?>" maxlength="300" required><div class="form-text">One or two sentences, shown on the service card and at the top of its page.</div></div>
                 <div class="col-12"><label class="form-label" for="description">Full description</label><textarea class="form-control" id="description" name="description" rows="6"><?= e($v('description')) ?></textarea><div class="form-text">Shown on the service page. Leave a blank line between paragraphs.</div></div>
                 <div class="col-12"><label class="form-label" for="features">What's included (one per line)</label><textarea class="form-control" id="features" name="features" rows="6" placeholder="Custom design&#10;Mobile-friendly&#10;SEO set up"><?= e($v('features')) ?></textarea></div>
+                <div class="col-12"><label class="form-label" for="faqs">Questions &amp; answers</label><textarea class="form-control" id="faqs" name="faqs" rows="7" placeholder="Q: How much does a website cost?&#10;A: It depends on …&#10;&#10;Q: How long does it take?&#10;A: …"><?= e($v('faqs')) ?></textarea><div class="form-text">Shown on the service page and sent to Google as FAQ data. Use real questions your customers ask.</div></div>
+            </div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-google me-1"></i>Search engine (SEO)</div>
+            <div class="card-body row g-3">
+                <div class="col-12"><label class="form-label" for="meta_title">SEO title <span class="text-muted small">(about 60 characters)</span></label><input class="form-control" id="meta_title" name="meta_title" value="<?= e($v('meta_title')) ?>" maxlength="120" placeholder="e.g. Website Designing Company in India | Affordable Business Websites"></div>
+                <div class="col-12"><label class="form-label" for="meta_description">Meta description <span class="text-muted small">(about 155 characters)</span></label><textarea class="form-control" id="meta_description" name="meta_description" rows="2" maxlength="300"><?= e($v('meta_description')) ?></textarea></div>
             </div>
         </div>
     </div>

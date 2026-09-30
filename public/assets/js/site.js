@@ -2,6 +2,15 @@
 (function () {
     'use strict';
     var root = document.documentElement;
+
+    // Google Analytics 4 (only when an ID is set in Settings → SEO & social).
+    var ga = root.getAttribute('data-ga');
+    if (ga) {
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('config', ga);
+    }
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!reduce && 'IntersectionObserver' in window) {
         root.classList.add('ws-anim');
@@ -46,25 +55,20 @@
             });
         });
 
-        // Highlight the menu item for the section in view.
+        // Highlight the menu item for the section in view (none for sections without one).
         var links = {};
         document.querySelectorAll('.ws-nav .nav-link[href*="#"]').forEach(function (a) {
             links[a.getAttribute('data-spy') || a.getAttribute('href').split('#')[1]] = a;
         });
-        if ('IntersectionObserver' in window) {
+        if ('IntersectionObserver' in window && Object.keys(links).length) {
             var spy = new IntersectionObserver(function (entries) {
                 entries.forEach(function (en) {
-                    var a = links[en.target.id];
-                    if (a && en.isIntersecting) {
-                        Object.keys(links).forEach(function (k) { links[k].classList.remove('active'); });
-                        a.classList.add('active');
-                    }
+                    if (!en.isIntersecting) { return; }
+                    Object.keys(links).forEach(function (k) { links[k].classList.remove('active'); });
+                    if (links[en.target.id]) { links[en.target.id].classList.add('active'); }
                 });
             }, { rootMargin: '-45% 0px -50% 0px' });
-            Object.keys(links).forEach(function (id) {
-                var s = document.getElementById(id);
-                if (s) { spy.observe(s); }
-            });
+            document.querySelectorAll('main section[id], main section').forEach(function (s) { spy.observe(s); });
         }
 
         // Keep only one FAQ item open at a time.

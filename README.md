@@ -190,6 +190,39 @@ Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company w
 - **Contact form messages** are saved under *Communication → Website enquiries* and emailed to the admin alert addresses (*Settings → Email (SMTP) & alerts*). Spam protection is a hidden honeypot field, CSRF, and at most 5 messages per hour from one IP.
 - **Settings → Website** can hide the Admin login link, turn off the contact form, or switch the website off entirely. With the website off, `/` goes straight to the client login as before.
 
+## Blog
+
+The website has a blog at `/blog` with categories (`/blog/category/...`), articles (`/blog/<address>`), an RSS feed (`/blog/feed.xml`) and the latest three posts on the home page. Six starter guides are included (cheap web hosting in India, digital marketing for small business, personal branding, a website design checklist, custom software and local SEO) — edit them to add your own experience.
+
+Write posts under **Communication → Blog posts** (Super Admin, or staff with the *Write & publish blog posts* permission):
+
+- Articles are written in simple Markdown with a toolbar (`## Heading`, `**bold**`, `[link](/services/seo)`, lists, quotes, tables). HTML is never allowed, so a post can't break or attack the site.
+- Cover image (JPG/PNG/WebP, 1200 × 630 is ideal) with alt text, category, and a **related service** — the article then shows a call-to-action for that service and appears on the service's page.
+- **Draft, publish or schedule** (a future date keeps the post hidden until then). *Save & preview* shows a draft exactly as visitors will see it (not indexed by Google).
+- Every post has an **SEO title, meta description and focus keyword** with character counters, a live Google preview and a 14-point **SEO checklist** (keyword in title, description, first paragraph, a heading and the address; 600+ words; subheadings; an internal link; cover alt text…). The list page shows each post's score.
+
+## SEO
+
+Built in for the public website (the panels, logins and webmail are kept out of Google with `noindex`):
+
+- **Titles and descriptions** for every page: the home page (*Settings → SEO & social*), each service (*Website services → edit → Search engine*) and each blog post.
+- **Canonical addresses, Open Graph and Twitter cards** (with a sharing image) so links look good on WhatsApp, LinkedIn, Facebook and X.
+- **Structured data (schema.org JSON-LD):** your business (*Organization / ProfessionalService*: name, logo, contact, address, area served India, social profiles, price range from your cheapest hosting plan), the website, each **Service** (hosting plans as offers with INR prices), **FAQ** answers (home page and per service), **BlogPosting** for articles and **breadcrumbs**.
+- **`/sitemap.xml`** (home, services, blog, categories and posts with last-modified dates) and **`/robots.txt`** (points to the sitemap and keeps panels out).
+- **Service FAQs:** add "Q: … / A: …" pairs to any service; they show on its page and to Google.
+- **Speed:** compressed text files and long browser caching for versioned assets (`public/.htaccess`), lazy-loaded images with fixed sizes.
+- **Settings → SEO & social:** Google Search Console and Bing verification codes (paste the whole meta tag or just the code), **Google Analytics 4** ID (public pages only), sharing image, and your Facebook, Instagram, LinkedIn, YouTube and X profiles (shown in the footer and in the structured data).
+
+### After you go live — steps that matter most for ranking
+
+1. Add the site to **Google Search Console**, paste the verification code in *Settings → SEO & social*, and submit `https://your-domain/sitemap.xml`.
+2. Create or complete your **Google Business Profile** with the same name, phone and address as the website, and ask happy customers for reviews.
+3. Add your **social profiles** in settings and link back to the website from them.
+4. **Publish regularly** — for example one helpful article a week answering real customer questions, linked to the matching service page.
+5. Earn **links and mentions** from directories, partners and local business associations.
+
+Ranking takes months of consistent work and nobody can guarantee a position on Google; these features give the site a strong technical base.
+
 ## Node.js apps (zip or GitHub / GitLab)
 
 Customers (and admins) can deploy Node.js apps to Node.js websites from the website page → **Node.js app**:

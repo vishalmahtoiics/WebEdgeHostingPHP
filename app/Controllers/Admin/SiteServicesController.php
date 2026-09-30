@@ -99,6 +99,9 @@ final class SiteServicesController extends Controller
             'summary' => mb_substr(trim(input_str('summary')), 0, 300),
             'description' => trim((string) ($_POST['description'] ?? '')) ?: null,
             'features' => trim((string) ($_POST['features'] ?? '')) ?: null,
+            'faqs' => trim(str_replace("\r\n", "\n", (string) ($_POST['faqs'] ?? ''))) ?: null,
+            'meta_title' => mb_substr(trim(input_str('meta_title')), 0, 120) ?: null,
+            'meta_description' => mb_substr(trim(input_str('meta_description')), 0, 300) ?: null,
             'price_note' => mb_substr(trim(input_str('price_note')), 0, 80) ?: null,
             'status' => input('status') ? 'active' : 'hidden',
             'sort_order' => (int) input('sort_order', 0),
@@ -113,6 +116,9 @@ final class SiteServicesController extends Controller
         }
         if (!isset(SiteServices::CATEGORIES[$data['category']])) {
             $errors[] = 'Choose a section.';
+        }
+        if ($data['faqs'] !== null && !SiteServices::faqs($data['faqs'])) {
+            $errors[] = 'Write questions as "Q: question" and the answer on the next line as "A: answer", with a blank line between them.';
         }
         if (mb_strlen($data['summary']) < 10) {
             $errors[] = 'Write a short summary (shown on the service card).';

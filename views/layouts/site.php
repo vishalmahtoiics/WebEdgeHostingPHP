@@ -11,10 +11,15 @@ $tagline = (string) setting('site.tagline');
 $dashboard = Auth::isAdmin() ? '/admin' : (Auth::isCustomer() ? '/customer' : null);
 $webmail = setting('webmail.enabled') ? url('/mails') : null;
 $home = url('/');
-$nav = ['#plans' => 'Hosting', '#why' => 'Why us', '#faq' => 'FAQ', '#contact' => 'Contact'];
+$nav = ['#plans' => 'Hosting', '#why' => 'Why us', '#contact' => 'Contact'];
 $menuServices = App\Support\SiteServices::grouped();
-$pageTitle = isset($service) ? $service['title'] . ' · ' . $siteName : $siteName . ($tagline ? ' — ' . $tagline : '');
-$pageDesc = isset($service) ? $service['summary'] : ($tagline ?: $siteName);
+$pageTitle = App\Support\Seo::title();
+$pageDesc = App\Support\Seo::description();
+$canonical = (string) App\Support\Seo::get('canonical', App\Support\Seo::abs('/'));
+$shareImage = App\Support\Seo::image();
+$social = App\Support\Seo::socialProfiles();
+$ga4 = App\Support\Seo::ga4();
+$socialIcons = ['facebook' => 'facebook', 'instagram' => 'instagram', 'linkedin' => 'linkedin', 'youtube' => 'youtube', 'x' => 'twitter-x'];
 $logoMark = static function (string $cls = '') use ($siteName): string {
     if ($logo = logo_url()) {
         return '<img src="' . e($logo) . '" alt="' . e($siteName) . '" class="ws-logo-img ' . $cls . '">';
@@ -23,15 +28,29 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
 };
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en-IN"<?= $ga4 ? ' data-ga="' . e($ga4) . '"' : '' ?>>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle) ?></title>
     <meta name="description" content="<?= e($pageDesc) ?>">
+    <meta name="robots" content="<?= e((string) (App\Support\Seo::get('robots') ?: 'index, follow, max-image-preview:large, max-snippet:-1')) ?>">
+    <link rel="canonical" href="<?= e($canonical) ?>">
+    <link rel="alternate" type="application/rss+xml" title="<?= e($siteName) ?> Blog" href="<?= e(App\Support\Seo::abs('/blog/feed.xml')) ?>">
+    <meta property="og:site_name" content="<?= e($siteName) ?>">
+    <meta property="og:locale" content="en_IN">
     <meta property="og:title" content="<?= e($pageTitle) ?>">
     <meta property="og:description" content="<?= e($pageDesc) ?>">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="<?= e((string) App\Support\Seo::get('type', 'website')) ?>">
+    <meta property="og:url" content="<?= e($canonical) ?>">
+    <?php if ($shareImage): ?><meta property="og:image" content="<?= e($shareImage) ?>"><?php endif; ?>
+    <?php if ($pub = App\Support\Seo::get('published')): ?><meta property="article:published_time" content="<?= e(date('c', strtotime((string) $pub))) ?>"><meta property="article:modified_time" content="<?= e(date('c', strtotime((string) App\Support\Seo::get('modified', $pub)))) ?>"><?php endif; ?>
+    <meta name="twitter:card" content="<?= $shareImage ? 'summary_large_image' : 'summary' ?>">
+    <meta name="twitter:title" content="<?= e($pageTitle) ?>">
+    <meta name="twitter:description" content="<?= e($pageDesc) ?>">
+    <?php if ($shareImage): ?><meta name="twitter:image" content="<?= e($shareImage) ?>"><?php endif; ?>
+    <?php if ($v = trim((string) setting('seo.google_verification'))): ?><meta name="google-site-verification" content="<?= e(preg_replace('/^.*content="([^"]+)".*$/', '$1', $v)) ?>"><?php endif; ?>
+    <?php if ($v = trim((string) setting('seo.bing_verification'))): ?><meta name="msvalidate.01" content="<?= e(preg_replace('/^.*content="([^"]+)".*$/', '$1', $v)) ?>"><?php endif; ?>
     <meta name="theme-color" content="<?= e($primary) ?>">
     <?php if ($favicon !== ''): ?><link rel="icon" href="<?= e(url($favicon)) ?>"><?php endif; ?>
     <link rel="stylesheet" href="<?= e(asset('assets/vendor/bootstrap/bootstrap.min.css')) ?>">
@@ -39,6 +58,8 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
     <link rel="stylesheet" href="<?= e(asset('assets/css/site.css')) ?>">
     <style>:root { --ws-primary: <?= e($primary) ?>; }</style>
     <script src="<?= e(asset('assets/js/site.js')) ?>"></script>
+    <?php if ($ga4): ?><script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($ga4) ?>"></script><?php endif; ?>
+    <?= App\Support\Seo::jsonLd() ?>
 </head>
 <body class="ws-body">
 <a class="visually-hidden-focusable ws-skip" href="#main">Skip to content</a>
@@ -69,6 +90,7 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
                     <?php foreach ($nav as $href => $label): ?>
                         <li class="nav-item"><a class="nav-link" href="<?= e($home . $href) ?>"><?= e($label) ?></a></li>
                     <?php endforeach; ?>
+                    <li class="nav-item"><a class="nav-link<?= str_starts_with((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), url('/blog')) ? ' active' : '' ?>" href="<?= e(url('/blog')) ?>">Blog</a></li>
                     <?php if ($webmail): ?><li class="nav-item"><a class="nav-link" href="<?= e($webmail) ?>"><i class="bi bi-envelope me-1"></i>Webmail</a></li><?php endif; ?>
                 </ul>
                 <div class="ws-actions">
@@ -96,12 +118,18 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
             <div class="col-lg-4">
                 <a class="ws-brand ws-brand-light" href="<?= e(url('/')) ?>"><?= $logoMark() ?></a>
                 <?php if ($tagline): ?><p class="ws-footer-text mt-3"><?= e($tagline) ?></p><?php endif; ?>
+                <?php if ($social): ?>
+                    <div class="ws-social mt-3">
+                        <?php foreach ($social as $k => $u): ?><a href="<?= e($u) ?>" target="_blank" rel="noopener me" aria-label="<?= e($siteName . ' on ' . ucfirst($k === 'x' ? 'X' : $k)) ?>"><i class="bi bi-<?= e($socialIcons[$k]) ?>"></i></a><?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="col-6 col-lg-3">
                 <div class="ws-footer-title"><?= !empty($menuServices['digital']) ? 'Services' : 'Explore' ?></div>
                 <ul class="ws-footer-links">
                     <?php if (!empty($menuServices['digital'])): ?>
-                        <?php foreach (array_slice($menuServices['digital'], 0, 6) as $ms): ?><li><a href="<?= e(url('/services/' . $ms['slug'])) ?>"><?= e($ms['title']) ?></a></li><?php endforeach; ?>
+                        <?php foreach (array_slice([...$menuServices['digital'], ...($menuServices['hosting'] ?? [])], 0, 8) as $ms): ?><li><a href="<?= e(url('/services/' . $ms['slug'])) ?>"><?= e($ms['title']) ?></a></li><?php endforeach; ?>
+                        <li><a href="<?= e(url('/blog')) ?>">Blog</a></li>
                     <?php else: ?>
                         <?php foreach ($nav as $href => $label): ?><li><a href="<?= e($home . $href) ?>"><?= e($label) ?></a></li><?php endforeach; ?>
                     <?php endif; ?>

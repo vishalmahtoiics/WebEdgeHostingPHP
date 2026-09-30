@@ -13,6 +13,12 @@ use App\Controllers\WebmailController;
 $router->get('/', [HomeController::class, 'index']);
 $router->post('/contact', [HomeController::class, 'contact']);
 $router->get('/services/{slug}', [HomeController::class, 'service']);
+$router->get('/blog', [App\Controllers\BlogController::class, 'index']);
+$router->get('/blog/feed.xml', [App\Controllers\BlogController::class, 'feed']);
+$router->get('/blog/category/{cat}', [App\Controllers\BlogController::class, 'category']);
+$router->get('/blog/{slug}', [App\Controllers\BlogController::class, 'show']);
+$router->get('/sitemap.xml', [App\Controllers\SeoController::class, 'sitemap']);
+$router->get('/robots.txt', [App\Controllers\SeoController::class, 'robots']);
 
 // Authentication
 $router->group('', ['auth' => 'guest'], static function ($r): void {
@@ -215,6 +221,13 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
     $r->post('/notifications/announce', [Admin\NotificationsController::class, 'announce'], ['perm' => 'notifications.manage']);
     $r->post('/bulk/assign', [Admin\BulkController::class, 'assign']);
     $r->post('/enquiries/bulk', [Admin\EnquiriesController::class, 'bulk'], ['perm' => 'customers.view']);
+    $r->group('/blog', ['perm' => 'blog.manage'], static function ($r): void {
+        $r->get('', [Admin\BlogController::class, 'index']);
+        $r->form('/create', [Admin\BlogController::class, 'create'], [Admin\BlogController::class, 'store']);
+        $r->form('/{id}/edit', [Admin\BlogController::class, 'edit'], [Admin\BlogController::class, 'update']);
+        $r->post('/{id}/status', [Admin\BlogController::class, 'status']);
+        $r->post('/{id}/delete', [Admin\BlogController::class, 'destroy']);
+    });
     $r->group('/site-services', ['perm' => 'settings.manage'], static function ($r): void {
         $r->get('', [Admin\SiteServicesController::class, 'index']);
         $r->form('/create', [Admin\SiteServicesController::class, 'create'], [Admin\SiteServicesController::class, 'store']);

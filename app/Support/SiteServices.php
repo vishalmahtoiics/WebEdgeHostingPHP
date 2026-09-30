@@ -21,7 +21,7 @@ final class SiteServices
         'camera-video' => 'Video', 'camera' => 'Photo', 'cart3' => 'Cart', 'bag-check' => 'Shop',
         'hdd-network' => 'Server', 'cloud-check' => 'Cloud', 'globe2' => 'Globe', 'envelope-paper' => 'Email',
         'shield-lock' => 'Security', 'database' => 'Database', 'gear' => 'Settings', 'headset' => 'Support',
-        'lightning-charge' => 'Speed', 'people' => 'People', 'chat-dots' => 'Chat', 'stars' => 'Stars',
+        'lightning-charge' => 'Speed', 'people' => 'People', 'person-badge' => 'Personal brand', 'person-video3' => 'Creator', 'chat-dots' => 'Chat', 'stars' => 'Stars',
     ];
 
     /** Active services grouped by category, in display order. */
@@ -56,6 +56,18 @@ final class SiteServices
     public static function paragraphs(?string $text): array
     {
         return array_values(array_filter(array_map('trim', preg_split('/\R\s*\R/', (string) $text)), 'strlen'));
+    }
+
+    /** "Q: …" / "A: …" blocks separated by blank lines. @return array<int, array{0: string, 1: string}> */
+    public static function faqs(?string $text): array
+    {
+        $out = [];
+        foreach (preg_split('/\R\s*\R/', trim((string) $text)) ?: [] as $block) {
+            if (preg_match('/^\s*Q:\s*(.+?)\R\s*A:\s*(.+)$/s', $block, $m)) {
+                $out[] = [trim($m[1]), trim((string) preg_replace('/\s+/', ' ', $m[2]))];
+            }
+        }
+        return $out;
     }
 
     public static function slugify(string $title): string

@@ -1,5 +1,6 @@
 <?php
 use App\Core\Settings;
+use App\Support\Seo;
 use App\Support\SiteServices;
 
 $siteName = (string) (setting('site.name') ?: brand_name());
@@ -35,6 +36,7 @@ $steps = [
 ];
 $faqs = [
     ['How much does a website or app cost?', 'It depends on what you need — the number of pages or screens, features and content. Tell us about your project and we will send a clear quote with no hidden charges.'],
+    ...(Seo::cheapestMonthly() !== null ? [['How cheap is your web hosting?', 'Our hosting plans start from ' . Seo::rupees((int) Seo::cheapestMonthly()) . ' per month (billed per plan period) and include SSL and an easy control panel. See the plans section for what each plan includes.']] : []),
     ['How long does it take to build a website?', 'A simple business website is usually much quicker than a large custom site, app or online store. After our first discussion we share a timeline for your exact project.'],
     ['Do you build apps for both Android and iPhone?', 'Yes. We design and develop apps for Android and iOS, as well as web apps, and can help publish them on the Play Store and App Store.'],
     ['Can you run our Google and social media marketing?', 'Yes. We plan and manage Google Ads, Facebook and Instagram campaigns, social media posting and SEO, with regular reports on results.'],
@@ -42,6 +44,11 @@ $faqs = [
     ['How do I sign in to my email?', $webmail ? 'Open ' . preg_replace('#^https?://#', '', $webmail) . ' in any browser and sign in with your full email address and password. You can also add it to Outlook, Gmail or your phone.' : 'You can add your mailbox to Outlook, Apple Mail, Gmail or your phone. Your settings are shown in your client area.'],
     ['What if I need help?', 'Use the contact form below' . (setting('contact.public_email') ? ', email ' . setting('contact.public_email') : '') . ($phone ? ' or call ' . $phone : '') . '. Existing customers can also reach us from their client area.'],
 ];
+$activeSlugs = array_column([...$digital, ...$hosting], 'slug');
+$svcLink = static fn (string $slug, string $text): string => in_array($slug, $activeSlugs, true) ? '<a href="' . e(url('/services/' . $slug)) . '">' . e($text) . '</a>' : e($text);
+Seo::add(Seo::faq($faqs));
+$fromMonthly = Seo::cheapestMonthly();
+$latestPosts = App\Support\Blog::latest(3);
 ?>
 
 <!-- Hero -->
@@ -57,6 +64,9 @@ $faqs = [
                     <a href="#contact" class="btn ws-btn ws-btn-primary ws-btn-lg">Start your project <i class="bi bi-arrow-right ms-1"></i></a>
                     <a href="#services" class="btn ws-btn ws-btn-outline ws-btn-lg"><i class="bi bi-grid me-1"></i>Our services</a>
                 </div>
+                <?php if ($fromMonthly !== null): ?>
+                    <p class="ws-hero-price"><i class="bi bi-hdd-network"></i> Web hosting from <b><?= e(Seo::rupees($fromMonthly)) ?>/month</b> with SSL, business email &amp; an easy control panel. <a href="#plans">See plans</a></p>
+                <?php endif; ?>
                 <?php if ($digital || $hosting): ?>
                     <div class="ws-hero-tags">
                         <?php foreach (array_slice([...$digital, ...$hosting], 0, 6) as $s): ?>
@@ -101,8 +111,8 @@ $faqs = [
     <div class="container">
         <div class="ws-section-head reveal">
             <span class="ws-kicker">What we do</span>
-            <h2>Everything your business needs to grow online</h2>
-            <p>From your brand and website to apps, marketing and hosting — planned, built and looked after by one team.</p>
+            <h2>Digital marketing, website design, software &amp; hosting — in one place</h2>
+            <p>From your brand and website to apps, custom software, social media and affordable web hosting — planned, built and looked after by one team for businesses across India.</p>
         </div>
         <?php if ($digital): ?>
             <div class="row g-4 justify-content-center">
@@ -214,6 +224,33 @@ $faqs = [
         </div>
     </div>
 </section>
+
+<!-- About (what we do, in plain words) -->
+<section class="ws-section ws-section-slim ws-about">
+    <div class="container ws-narrow reveal">
+        <span class="ws-kicker">About <?= e($siteName) ?></span>
+        <h2 class="ws-h2">A digital marketing agency and web hosting company for businesses across India</h2>
+        <p class="ws-prose"><?= e($siteName) ?> helps businesses, startups and professionals grow online. We design and develop <?= $svcLink('website-design', 'business websites') ?> and <?= $svcLink('ecommerce', 'online stores') ?>, build <?= $svcLink('app-development', 'mobile apps') ?> and <?= $svcLink('software-development', 'custom software') ?>, and run <?= $svcLink('digital-marketing', 'digital marketing') ?>, <?= $svcLink('seo', 'SEO') ?>, <?= $svcLink('social-media', 'social media') ?> and <?= $svcLink('personal-branding', 'personal branding') ?> campaigns that bring real enquiries.</p>
+        <p class="ws-prose">Your website also needs a reliable home. Our <?= $svcLink('web-hosting', 'affordable web hosting') ?> comes with SSL, <?= $svcLink('business-email', 'business email') ?>, <?= $svcLink('domains', 'domain and DNS management') ?> and a simple client area — so everything your business needs online is handled by one team you can talk to, wherever you are in India.</p>
+    </div>
+</section>
+
+<?php if ($latestPosts): ?>
+<!-- Blog -->
+<section class="ws-section ws-section-tint" id="blog">
+    <div class="container">
+        <div class="ws-section-head reveal">
+            <span class="ws-kicker">From our blog</span>
+            <h2>Guides to grow your business online</h2>
+            <p>Practical tips on marketing, websites, hosting, software and personal branding.</p>
+        </div>
+        <div class="row g-4">
+            <?php foreach ($latestPosts as $i => $bp): ?><div class="col-md-6 col-lg-4 reveal" style="--d: <?= $i * 60 ?>ms"><?= partial('site/post_card', ['p' => $bp]) ?></div><?php endforeach; ?>
+        </div>
+        <p class="text-center mt-4"><a href="<?= e(url('/blog')) ?>" class="btn ws-btn ws-btn-outline">All articles <i class="bi bi-arrow-right ms-1"></i></a></p>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- FAQ -->
 <section class="ws-section" id="faq">

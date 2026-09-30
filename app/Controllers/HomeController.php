@@ -8,6 +8,7 @@ use App\Core\DB;
 use App\Core\Settings;
 use App\Services\AdminAlerts;
 use App\Services\Mailer;
+use App\Support\Seo;
 use App\Support\SiteServices;
 
 /** The public company website shown at the site root, and its contact form. */
@@ -33,6 +34,12 @@ final class HomeController extends Controller
         } elseif (($svc = query('service')) !== '' && SiteServices::findActive($svc)) {
             $interest = 'service:' . $svc;
         }
+        Seo::sendHeaders();
+        Seo::page([
+            'title' => (string) (Settings::get('seo.home_title') ?: Seo::siteName()),
+            'description' => (string) Settings::get('seo.home_description'),
+            'canonical' => Seo::abs('/'),
+        ]);
         return $this->view('site/home', [
             'title' => (string) (Settings::get('site.name') ?: brand_name()),
             'plans' => $plans,
@@ -50,11 +57,23 @@ final class HomeController extends Controller
         }
         $service = SiteServices::findActive($slug) ?? abort(404);
         $all = SiteServices::active();
+        $plans = $service['category'] === 'hosting' ? self::plans() : [];
+        Seo::sendHeaders();
+        Seo::page([
+            'title' => $service['meta_title'] ?: $service['title'] . ' in ' . (Settings::get('seo.area_served') ?: 'India') . ' | ' . Seo::siteName(),
+            'description' => $service['meta_description'] ?: $service['summary'],
+            'canonical' => Seo::abs('/services/' . $service['slug']),
+            'schema' => [
+                Seo::service($service, $service['slug'] === 'web-hosting' ? $plans : []),
+                Seo::breadcrumbs([['Home', '/'], ['Services', '/#services'], [$service['title'], '/services/' . $service['slug']]]),
+            ],
+        ]);
         return $this->view('site/service', [
             'title' => $service['title'],
             'service' => $service,
             'related' => array_slice(array_values(array_filter($all, static fn ($s) => $s['id'] !== $service['id'] && $s['category'] === $service['category'])), 0, 3),
-            'plans' => $service['category'] === 'hosting' ? self::plans() : [],
+            'plans' => $plans,
+            'posts' => DB::all('SELECT slug, title, excerpt, cover_image, cover_alt, category, published_at, body FROM blog_posts WHERE service_id = ? AND ' . \App\Support\Blog::PUBLISHED . ' ORDER BY published_at DESC LIMIT 3', [$service['id']]),
             'services' => SiteServices::grouped(),
             'interest' => 'service:' . $service['slug'],
             'interests' => self::INTERESTS,

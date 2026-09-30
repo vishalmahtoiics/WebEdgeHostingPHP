@@ -3,6 +3,10 @@ use App\Support\SiteServices;
 
 $s = $service;
 $features = SiteServices::lines($s['features']);
+$faqs = SiteServices::faqs($s['faqs'] ?? null);
+if ($faqs) {
+    App\Support\Seo::add(App\Support\Seo::faq($faqs));
+}
 $paras = SiteServices::paragraphs($s['description']);
 $price = static fn ($paise): string => preg_replace('/\.00$/', '', money($paise));
 $isHosting = $s['category'] === 'hosting';
@@ -77,6 +81,28 @@ $steps = $isHosting
         <div class="container">
             <div class="ws-section-head reveal"><span class="ws-kicker">Hosting plans</span><h2>Pick a plan</h2></div>
             <?= partial('site/plans_grid', ['plans' => $plans]) ?>
+        </div>
+    </section>
+<?php endif; ?>
+
+<?php if ($faqs): ?>
+    <section class="ws-section ws-section-slim" id="faq">
+        <div class="container ws-narrow">
+            <div class="ws-section-head reveal"><span class="ws-kicker">FAQ</span><h2><?= e($s['title']) ?>: common questions</h2></div>
+            <div class="ws-faq reveal">
+                <?php foreach ($faqs as $i => [$q, $a]): ?><details<?= $i === 0 ? ' open' : '' ?>><summary><?= e($q) ?><i class="bi bi-plus-lg"></i></summary><p><?= e($a) ?></p></details><?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+<?php endif; ?>
+
+<?php if (!empty($posts)): ?>
+    <section class="ws-section ws-section-tint">
+        <div class="container">
+            <div class="ws-section-head reveal"><span class="ws-kicker">Guides</span><h2><?= e($s['title']) ?> tips from our blog</h2></div>
+            <div class="row g-4 justify-content-center">
+                <?php foreach ($posts as $i => $bp): ?><div class="col-md-6 col-lg-4 reveal" style="--d: <?= $i * 60 ?>ms"><?= partial('site/post_card', ['p' => $bp]) ?></div><?php endforeach; ?>
+            </div>
         </div>
     </section>
 <?php endif; ?>

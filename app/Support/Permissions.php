@@ -20,6 +20,7 @@ final class Permissions
             'subscriptions' => ['label' => 'Subscriptions', 'perms' => ['subscriptions.view' => 'View subscriptions & renewals', 'subscriptions.manage' => 'Manage subscriptions & run renewals']],
             'billing' => ['label' => 'Billing', 'perms' => ['billing.view' => 'View payments & credit notes', 'billing.manage' => 'Record payments, refunds & credit notes']],
             'invoices' => ['label' => 'Invoices', 'perms' => ['invoices.view' => 'View invoices', 'invoices.manage' => 'Create, void & update invoices']],
+            'website' => ['label' => 'Website', 'perms' => ['blog.manage' => 'Write & publish blog posts']],
             'notifications' => ['label' => 'Notifications', 'perms' => ['notifications.manage' => 'Send announcements']],
             'activities' => ['label' => 'Activities', 'perms' => ['activities.view' => 'View activity logs']],
             'security' => ['label' => 'Security', 'perms' => ['security.view' => 'View security logs', 'security.manage' => 'Manage admin users & roles']],
