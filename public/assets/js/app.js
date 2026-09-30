@@ -76,6 +76,76 @@
         btn.addEventListener('click', function () { window.print(); });
     });
 
+    // Select / clear all visible checkboxes in a list: <button data-check-all="#list label">, count: <b data-check-count="#list">.
+    var countChecks = function () {
+        document.querySelectorAll('[data-check-count]').forEach(function (c) {
+            c.textContent = document.querySelectorAll(c.getAttribute('data-check-count') + ' input[type=checkbox]:checked').length;
+        });
+    };
+    ['data-check-all', 'data-check-none'].forEach(function (attr) {
+        document.querySelectorAll('[' + attr + ']').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll(btn.getAttribute(attr)).forEach(function (el) {
+                    if (el.hidden || el.classList.contains('d-none')) { return; }
+                    el.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = attr === 'data-check-all'; });
+                });
+                countChecks();
+            });
+        });
+    });
+    document.addEventListener('change', countChecks);
+    countChecks();
+
+    // Checkbox selections with a bulk action bar: <form id="x" data-bulk-bar>, rows <input data-bulk-item form="x">,
+    // header <input data-bulk-all="x">. The bar shows the count and only appears while something is selected.
+    document.querySelectorAll('[data-bulk-bar]').forEach(function (bar) {
+        var id = bar.id;
+        var items = function () {
+            return Array.prototype.filter.call(document.querySelectorAll('[data-bulk-item]'), function (el) {
+                return el.form === bar;
+            });
+        };
+        var alls = document.querySelectorAll('[data-bulk-all="' + id + '"]');
+        var refresh = function () {
+            var list = items();
+            var n = list.filter(function (el) { return el.checked; }).length;
+            bar.querySelectorAll('[data-bulk-count]').forEach(function (c) { c.textContent = n; });
+            bar.classList.toggle('show', n > 0);
+            bar.querySelectorAll('button[name="do"], button[data-bulk-needs]').forEach(function (b) { b.disabled = n === 0; });
+            alls.forEach(function (a) {
+                a.checked = n > 0 && n === list.length;
+                a.indeterminate = n > 0 && n < list.length;
+            });
+        };
+        alls.forEach(function (a) {
+            a.addEventListener('change', function () {
+                items().forEach(function (el) { el.checked = a.checked; });
+                refresh();
+            });
+        });
+        document.addEventListener('change', function (e) {
+            if (e.target.hasAttribute && e.target.hasAttribute('data-bulk-item')) {
+                refresh();
+            }
+        });
+        // "All" for one group inside the bar: <input data-bulk-group="domains">, items carry data-group="domains".
+        bar.querySelectorAll('[data-bulk-group]').forEach(function (g) {
+            g.addEventListener('change', function () {
+                items().forEach(function (el) {
+                    if (el.getAttribute('data-group') === g.getAttribute('data-bulk-group')) { el.checked = g.checked; }
+                });
+                refresh();
+            });
+        });
+        bar.querySelectorAll('[data-bulk-clear]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                items().forEach(function (el) { el.checked = false; });
+                refresh();
+            });
+        });
+        refresh();
+    });
+
     // Auto-submit filter selects: <select data-autosubmit>
     document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         el.addEventListener('change', function () { el.form.submit(); });

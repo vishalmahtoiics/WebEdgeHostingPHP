@@ -117,6 +117,11 @@ final class CustomersController extends Controller
             'emailDomains' => $this->scoped(DB::all('SELECT e.id, e.name, e.status, (SELECT COUNT(*) FROM mailboxes m WHERE m.email_domain_id = e.id) AS n FROM email_domains e WHERE e.customer_id = ? ORDER BY e.name', [$id]), 'name'),
             'vps' => DB::all("SELECT name, status, meta FROM provider_resources WHERE type = 'vps' AND local_type = 'customer' AND local_id = ?", [$id]),
             'plans' => DB::all("SELECT * FROM plans WHERE status = 'active' ORDER BY sort_order, name"),
+            'unassigned' => [
+                'domains' => can('domains.manage') ? $this->scoped(DB::all('SELECT id, name FROM domains WHERE customer_id IS NULL ORDER BY name'), 'name') : [],
+                'websites' => can('websites.manage') ? $this->scoped(DB::all('SELECT id, domain AS name FROM websites WHERE customer_id IS NULL ORDER BY domain'), 'name') : [],
+                'email' => can('email.manage') ? $this->scoped(DB::all('SELECT id, name FROM email_domains WHERE customer_id IS NULL ORDER BY name'), 'name') : [],
+            ],
         ]);
     }
 
@@ -204,6 +209,15 @@ final class CustomersController extends Controller
             }
             $v = trim(input_str($k));
             $data[$k] = ctype_digit($v) ? min(100000, (int) $v) : null;
+        }
+        if (array_key_exists('allow_nodejs', $_POST)) {
+            $v = input_str('allow_nodejs');
+            $allow = $v === '' ? null : ($v === '1' ? 1 : 0);
+            $prev = DB::value('SELECT allow_nodejs FROM customers WHERE id = ?', [$id]);
+            if ((string) $prev !== (string) $allow) {
+                DB::update('customers', ['allow_nodejs' => $allow], 'id = ?', [$id]);
+                Logger::activity('customers', 'nodejs', 'Node.js deploys for customer: ' . ($allow === null ? 'default' : ($allow ? 'allowed' : 'not allowed')), 'customer', $id, $id);
+            }
         }
         if ($data) {
             $old = DB::one('SELECT name, max_mailboxes, max_email_aliases FROM customers WHERE id = ?', [$id]);

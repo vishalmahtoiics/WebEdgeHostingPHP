@@ -66,4 +66,13 @@ final class ManualDriver implements ProviderDriver
     public function listAliases(string $orderId): array { $this->unsupported(); }
     public function createAlias(string $mailboxId, string $localPart): string { $this->unsupported(); }
     public function deleteAlias(string $aliasId): void { $this->unsupported(); }
+    public function nodejsUpload(string $account, string $domain, string $localFile, string $remoteName): void { $this->unsupported(); }
+    public function nodejsDetect(string $account, string $domain, string $archivePath): array { $this->unsupported(); }
+    public function nodejsBuild(string $account, string $domain, array $settings, string $archivePath): array { $this->unsupported(); }
+    public function nodejsBuildStatus(string $account, string $domain, string $uuid): array { $this->unsupported(); }
+    public function nodejsBuildLogs(string $account, string $domain, string $uuid, int $fromLine): array { $this->unsupported(); }
+    public function nodejsBuildAnalysis(string $account, string $domain, string $uuid): array { $this->unsupported(); }
+    public function nodejsSetEnv(string $account, string $domain, array $vars): void { $this->unsupported(); }
+    public function nodejsRestart(string $account, string $domain): void { $this->unsupported(); }
+    public function nodejsRuntimeLogs(string $account, string $domain, string $period, int $limit): array { $this->unsupported(); }
 }

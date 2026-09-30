@@ -43,7 +43,12 @@ sort($known);
                 <?php if (!$known): ?>
                     <div class="small text-muted p-2">No domains in the panel yet.</div>
                 <?php else: ?>
-                    <input class="form-control form-control-sm mb-2" type="search" placeholder="Filter domains…" aria-label="Filter domains" data-filter="#domainList label">
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                        <input class="form-control form-control-sm flex-grow-1 w-auto" type="search" placeholder="Filter domains…" aria-label="Filter domains" data-filter="#domainList label">
+                        <button type="button" class="btn btn-sm btn-light" data-check-all="#domainList label">Select all shown</button>
+                        <button type="button" class="btn btn-sm btn-light" data-check-none="#domainList label">Clear</button>
+                        <span class="small text-muted"><b data-check-count="#domainList">0</b> selected</span>
+                    </div>
                     <div id="domainList" class="row row-cols-1 row-cols-sm-2 g-1" style="max-height: 280px; overflow-y: auto">
                         <?php foreach ($known as $i => $dn): ?>
                             <label class="col d-flex align-items-center gap-2 small px-2 py-1"><input class="form-check-input mt-0" type="checkbox" name="domains[]" value="<?= e($dn) ?>"<?= checked(in_array($dn, $assigned, true)) ?>><span class="text-truncate"><?= e($dn) ?></span></label>

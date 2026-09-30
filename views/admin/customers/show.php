@@ -153,6 +153,38 @@ $manage = can('customers.manage');
     </div>
 
     <div class="tab-pane fade" id="tab-resources" role="tabpanel">
+        <?php $pick = array_filter($unassigned); if ($pick && $c['status'] !== 'closed'): ?>
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-plus-square me-1"></i>Add existing services to <?= e($c['name']) ?></span><span class="small text-muted"><?= array_sum(array_map('count', $pick)) ?> unassigned</span></div>
+                <form id="addServices" method="post" action="<?= e(url('/admin/bulk/assign')) ?>" data-bulk-bar class="we-bulk we-bulk-static m-0">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="customer_id" value="<?= (int) $c['id'] ?>">
+                    <input type="hidden" name="back" value="/admin/customers/<?= (int) $c['id'] ?>">
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">Tick everything that belongs to this customer and assign it in one go.</p>
+                        <div class="row g-3">
+                            <?php foreach (['domains' => ['Domains', 'globe2'], 'websites' => ['Websites', 'window'], 'email' => ['Email domains', 'envelope']] as $k => [$label, $icon]): if (empty($pick[$k])) { continue; } ?>
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-medium small"><i class="bi bi-<?= $icon ?> me-1"></i><?= e($label) ?> (<?= count($pick[$k]) ?>)</span>
+                                        <label class="small text-muted"><input type="checkbox" class="form-check-input me-1" data-bulk-group="<?= e($k) ?>">All</label>
+                                    </div>
+                                    <div class="border rounded we-pick-list p-2">
+                                        <?php foreach ($pick[$k] as $it): ?>
+                                            <div class="form-check small"><input class="form-check-input" type="checkbox" id="pick-<?= e($k . '-' . $it['id']) ?>" name="<?= e($k) ?>[]" value="<?= (int) $it['id'] ?>" data-bulk-item data-group="<?= e($k) ?>"><label class="form-check-label" for="pick-<?= e($k . '-' . $it['id']) ?>"><?= e($it['name']) ?></label></div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="form-check small m-0"><input class="form-check-input" type="checkbox" id="add_linked" name="linked" value="1" checked><label class="form-check-label" for="add_linked">Also assign the linked website, domain &amp; email with the same name</label></div>
+                        <button class="btn btn-primary btn-sm" name="do" value="assign"><i class="bi bi-person-check me-1"></i>Assign <span data-bulk-count>0</span> selected</button>
+                    </div>
+                </form>
+            </div>
+        <?php endif; ?>
         <div class="row g-3">
             <?php
             $blocks = [

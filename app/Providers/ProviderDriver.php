@@ -66,4 +66,22 @@ interface ProviderDriver
     /** @return string provider alias id */
     public function createAlias(string $mailboxId, string $localPart): string;
     public function deleteAlias(string $aliasId): void;
+
+    // Node.js web apps
+    /** Upload a local archive into the website's public_html as $remoteName. */
+    public function nodejsUpload(string $account, string $domain, string $localFile, string $remoteName): void;
+    /** Build settings detected from an uploaded archive (app_type, node_version, root_directory, ..., available_scripts). */
+    public function nodejsDetect(string $account, string $domain, string $archivePath): array;
+    /** Start a build from an uploaded archive. @return array{uuid: string, state: string} */
+    public function nodejsBuild(string $account, string $domain, array $settings, string $archivePath): array;
+    public function nodejsBuildStatus(string $account, string $domain, string $uuid): array;
+    /** @return array{logs: string, lines: int} */
+    public function nodejsBuildLogs(string $account, string $domain, string $uuid, int $fromLine): array;
+    /** @return array{analysis: ?string, solution: ?string} */
+    public function nodejsBuildAnalysis(string $account, string $domain, string $uuid): array;
+    /** @param array<string,string> $vars full set; replaces everything and restarts the app */
+    public function nodejsSetEnv(string $account, string $domain, array $vars): void;
+    public function nodejsRestart(string $account, string $domain): void;
+    /** @return array{logs: array, last_deployed_at: ?string} */
+    public function nodejsRuntimeLogs(string $account, string $domain, string $period, int $limit): array;
 }

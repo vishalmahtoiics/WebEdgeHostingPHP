@@ -58,6 +58,11 @@ final class EmailController extends BaseEmailController
             $where[] = 'e.status = ?';
             $params[] = $s;
         }
+        if (query('assigned') === 'yes') {
+            $where[] = 'e.customer_id IS NOT NULL';
+        } elseif (query('assigned') === 'no') {
+            $where[] = 'e.customer_id IS NULL';
+        }
         [$scopeSql, $scopeParams] = DomainScope::sql('e.name');
         $where[] = $scopeSql;
         array_push($params, ...$scopeParams);

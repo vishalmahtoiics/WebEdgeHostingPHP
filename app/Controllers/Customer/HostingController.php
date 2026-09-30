@@ -51,6 +51,8 @@ final class HostingController extends Controller
             'domain' => $w['domain_id'] ? DB::one('SELECT id, name, status FROM domains WHERE id = ? AND customer_id = ?', [$w['domain_id'], $this->cid()]) : null,
             'ssl' => DB::one('SELECT * FROM ssl_checks WHERE hostname = ?', [$w['domain']]),
             'canSslInstall' => $w['status'] === 'active' && $w['external_username'] && $w['provider_id'],
+            'nodeApp' => $nodeApp = \App\Services\NodejsService::app($id),
+            'nodeAllowed' => $w['status'] === 'active' && ($w['website_type'] === 'nodejs' || $nodeApp) && \App\Services\NodejsService::customerAllowed($this->cid()),
         ]);
     }
 

@@ -20,6 +20,19 @@ $editing = $customer !== null;
                 <div class="col-12 form-text mt-1">For example 5: the customer can create up to 5 email accounts themselves and sees "5 email accounts on your plan". Leave empty to use their plan's limit. 0 means none.</div>
             </div>
         </div>
+        <div class="card mb-3">
+            <div class="card-header">Node.js apps</div>
+            <div class="card-body">
+                <?php $an = old('allow_nodejs', $customer === null || $customer['allow_nodejs'] === null ? '' : (string) (int) $customer['allow_nodejs']); ?>
+                <label class="form-label" for="allow_nodejs">Can deploy Node.js apps</label>
+                <select class="form-select" id="allow_nodejs" name="allow_nodejs">
+                    <option value=""<?= selected($an, '') ?>>Default (<?= setting('nodejs.enabled') ? 'allowed' : 'not allowed' ?> — Settings → Node.js apps)</option>
+                    <option value="1"<?= selected($an, '1') ?>>Allowed</option>
+                    <option value="0"<?= selected($an, '0') ?>>Not allowed</option>
+                </select>
+                <div class="form-text">Applies to this customer's Node.js websites (upload zip, Git deploy, environment variables, logs).</div>
+            </div>
+        </div>
         <?php if ($editing): ?>
             <div class="card mb-3">
                 <div class="card-header">Internal notes</div>

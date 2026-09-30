@@ -70,7 +70,7 @@ final class DomainService
         return $id;
     }
 
-    public static function assign(int $domainId, ?int $customerId): void
+    public static function assign(int $domainId, ?int $customerId, bool $notify = true): void
     {
         $d = DB::one('SELECT * FROM domains WHERE id = ?', [$domainId]);
         if ((int) $d['customer_id'] === (int) $customerId) {
@@ -79,7 +79,7 @@ final class DomainService
         DB::update('domains', ['customer_id' => $customerId, 'assigned_at' => $customerId ? now() : null, 'updated_at' => now()], 'id = ?', [$domainId]);
         Logger::activity('domains', $customerId ? 'assign' : 'unassign',
             $customerId ? "Assigned domain {$d['name']}" : "Unassigned domain {$d['name']}", 'domain', $domainId, $customerId ?? ($d['customer_id'] ? (int) $d['customer_id'] : null));
-        if ($customerId) {
+        if ($customerId && $notify) {
             self::notifyAssigned($customerId, $d['name'], $domainId);
         }
     }

@@ -112,6 +112,7 @@ final class WebsitesController extends Controller
             'ssl' => DB::one('SELECT * FROM ssl_checks WHERE hostname = ?', [$w['domain']]),
             'customers' => customer_options(),
             'activities' => DB::all("SELECT * FROM activity_logs WHERE resource_type = 'website' AND resource_id = ? ORDER BY id DESC LIMIT 15", [(string) $id]),
+            'nodeApp' => \App\Services\NodejsService::app($id),
         ]);
     }
 

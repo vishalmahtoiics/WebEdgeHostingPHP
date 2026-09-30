@@ -154,6 +154,14 @@ final class SettingsSchema
                     'webmail.max_attachment_mb' => ['label' => 'Maximum total attachment size (MB)', 'type' => 'number', 'default' => '20'],
                 ],
             ],
+            'nodejs' => [
+                'label' => 'Node.js apps', 'icon' => 'filetype-js',
+                'fields' => [
+                    'nodejs.enabled' => ['label' => 'Customers can deploy Node.js apps', 'type' => 'bool', 'default' => '1', 'help' => 'Works on Node.js websites (Hostinger Business or Cloud plans). You can allow or block single customers on the customer\'s edit page.'],
+                    'nodejs.max_upload_mb' => ['label' => 'Maximum zip size (MB)', 'type' => 'number', 'default' => '100', 'help' => 'Also limited by your server\'s PHP upload_max_filesize and post_max_size.'],
+                    'nodejs.git' => ['label' => 'Allow deploying from GitHub / GitLab', 'type' => 'bool', 'default' => '1'],
+                ],
+            ],
             'security' => [
                 'label' => 'Security', 'icon' => 'shield-lock',
                 'fields' => [

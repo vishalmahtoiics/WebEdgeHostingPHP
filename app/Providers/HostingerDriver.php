@@ -6,13 +6,13 @@ namespace App\Providers;
 use App\Core\Settings;
 
 /**
- * Hostinger public API (https://developers.hostinger.com), OpenAPI v1.55.
+ * Hostinger public API (https://developers.hostinger.com), OpenAPI v1.56.
  * Authentication: Bearer API token generated in hPanel → Account → API.
  */
 final class HostingerDriver implements ProviderDriver
 {
     private const DEFAULT_BASE = 'https://developers.hostinger.com';
-    private const FEATURES = ['dns', 'domains', 'websites', 'databases', 'ssl', 'email', 'discovery'];
+    private const FEATURES = ['dns', 'domains', 'websites', 'databases', 'ssl', 'email', 'discovery', 'nodejs'];
 
     public function __construct(private readonly array $credentials)
     {
@@ -351,6 +351,135 @@ final class HostingerDriver implements ProviderDriver
         $this->request('DELETE', '/api/mail/v1/aliases/' . rawurlencode($aliasId));
     }
 
+    // ---- Node.js web apps --------------------------------------------------
+
+    private function site(string $account, string $domain): string
+    {
+        return '/api/hosting/v1/accounts/' . rawurlencode($account) . '/websites/' . rawurlencode($domain) . '/nodejs';
+    }
+
+    public function nodejsUpload(string $account, string $domain, string $localFile, string $remoteName): void
+    {
+        $u = $this->request('POST', '/api/hosting/v1/files/upload-urls', [], ['username' => $account, 'domain' => $domain]);
+        $url = (string) ($u['url'] ?? '');
+        $base = rtrim((string) config('providers.hostinger_base_url', self::DEFAULT_BASE), '/');
+        // The upload server comes from the API; only accept HTTPS (or the configured API host itself).
+        if (!str_starts_with($url, 'https://') && !str_starts_with($url, $base . '/')) {
+            throw new ProviderException('The provider returned an unexpected upload address.');
+        }
+        $size = (int) filesize($localFile);
+        $target = rtrim($url, '/') . '/' . rawurlencode($remoteName) . '?override=true';
+        $auth = ['X-Auth: ' . ($u['auth_key'] ?? ''), 'X-Auth-Rest: ' . ($u['rest_auth_key'] ?? ''), 'Tus-Resumable: 1.0.0'];
+        [$code] = $this->tus('POST', $target, [...$auth, 'Upload-Length: ' . $size, 'Upload-Offset: 0'], '');
+        if ($code !== 201) {
+            throw new ProviderException("The file upload could not be started ($code).");
+        }
+        $fh = fopen($localFile, 'rb');
+        $offset = 0;
+        try {
+            while ($offset < $size) {
+                $chunk = (string) fread($fh, 8 * 1024 * 1024);
+                [$code, $headers] = $this->tus('PATCH', $target, [...$auth, 'Upload-Offset: ' . $offset, 'Content-Type: application/offset+octet-stream'], $chunk);
+                $newOffset = (int) ($headers['upload-offset'] ?? -1);
+                if ($code !== 204 || $newOffset !== $offset + strlen($chunk)) {
+                    throw new ProviderException("The file upload failed at " . round($offset / 1048576, 1) . " MB ($code).");
+                }
+                $offset = $newOffset;
+            }
+        } finally {
+            fclose($fh);
+        }
+    }
+
+    /** @return array{0: int, 1: array<string,string>} status and lower-cased response headers */
+    private function tus(string $method, string $url, array $headers, string $body): array
+    {
+        $out = [];
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [...$headers, 'Content-Length: ' . strlen($body), 'Expect:'],
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 300,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_HEADERFUNCTION => static function ($ch, string $line) use (&$out): int {
+                if (str_contains($line, ':')) {
+                    [$k, $v] = explode(':', $line, 2);
+                    $out[strtolower(trim($k))] = trim($v);
+                }
+                return strlen($line);
+            },
+        ]);
+        $raw = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+        if ($raw === false) {
+            throw new ProviderException("Could not reach the provider upload server: $err");
+        }
+        return [$code, $out];
+    }
+
+    public function nodejsDetect(string $account, string $domain, string $archivePath): array
+    {
+        return $this->request('GET', $this->site($account, $domain) . '/builds/settings/from-archive', ['archive_path' => $archivePath]);
+    }
+
+    public function nodejsBuild(string $account, string $domain, array $settings, string $archivePath): array
+    {
+        $body = array_filter([
+            'node_version' => (int) $settings['node_version'],
+            'app_type' => $settings['app_type'],
+            'root_directory' => (string) ($settings['root_directory'] ?? '.'),
+            'output_directory' => (string) ($settings['output_directory'] ?? ''),
+            'build_script' => (string) ($settings['build_script'] ?? ''),
+            'entry_file' => $settings['entry_file'] ?? null,
+            'package_manager' => $settings['package_manager'] ?? null,
+        ], static fn ($v) => $v !== null);
+        $body['source_type'] = 'archive';
+        $body['source_options'] = ['archive_path' => $archivePath];
+        return $this->request('POST', $this->site($account, $domain) . '/builds', [], $body);
+    }
+
+    public function nodejsBuildStatus(string $account, string $domain, string $uuid): array
+    {
+        return $this->request('GET', $this->site($account, $domain) . '/builds/' . rawurlencode($uuid));
+    }
+
+    public function nodejsBuildLogs(string $account, string $domain, string $uuid, int $fromLine): array
+    {
+        $r = $this->request('GET', $this->site($account, $domain) . '/builds/' . rawurlencode($uuid) . '/logs', $fromLine > 0 ? ['from_line' => $fromLine] : []);
+        return ['logs' => (string) ($r['logs'] ?? ''), 'lines' => (int) ($r['lines'] ?? 0)];
+    }
+
+    public function nodejsBuildAnalysis(string $account, string $domain, string $uuid): array
+    {
+        $r = $this->request('GET', $this->site($account, $domain) . '/builds/' . rawurlencode($uuid) . '/analysis');
+        return ['analysis' => $r['analysis'] ?? null, 'solution' => $r['solution'] ?? null];
+    }
+
+    public function nodejsSetEnv(string $account, string $domain, array $vars): void
+    {
+        $list = [];
+        foreach ($vars as $k => $v) {
+            $list[] = ['key' => (string) $k, 'value' => (string) $v];
+        }
+        $this->request('PUT', $this->site($account, $domain) . '/builds/settings/env', [], ['env_vars' => $list]);
+    }
+
+    public function nodejsRestart(string $account, string $domain): void
+    {
+        $this->request('POST', $this->site($account, $domain) . '/server/restart');
+    }
+
+    public function nodejsRuntimeLogs(string $account, string $domain, string $period, int $limit): array
+    {
+        $r = $this->request('GET', $this->site($account, $domain) . '/runtime-logs', ['period' => $period, 'limit' => $limit]);
+        return ['logs' => (array) ($r['logs'] ?? []), 'last_deployed_at' => $r['last_deployed_at'] ?? null];
+    }
+
     // ---- HTTP --------------------------------------------------------------
 
     private function res(string $type, string $id, string $name, ?string $status, ?string $parent, array $meta): array
@@ -421,6 +550,7 @@ final class HostingerDriver implements ProviderDriver
             $status === 401 => 'The API token was rejected (401). Check or regenerate the token.',
             $status === 403 => 'The API token is not allowed to do this (403).',
             $status === 404 => 'Not found at the provider (404)' . ($message ? ": $message" : '.'),
+            $status === 409 => 'The website is still being set up at the provider (409). Try again in a few minutes.',
             $status === 429 => 'Provider rate limit reached (429). Try again in a minute.',
             default => "Provider API error ($status)" . ($message ? ": $message" : '.'),
         };

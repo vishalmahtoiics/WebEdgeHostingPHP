@@ -1,3 +1,4 @@
+<?php $bulk = can('domains.manage'); ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div class="small text-muted">
         <?php if ($unclaimed > 0): ?>
@@ -27,10 +28,11 @@
         <?= partial('partials/empty', ['icon' => 'globe2', 'message' => 'No domains found']) ?>
     <?php else: ?>
         <div class="table-responsive"><table class="table table-hover table-we">
-            <thead><tr><th>Domain</th><th>Source</th><th>Customer</th><th>Expires</th><th>DNS</th><th>SSL</th><th>Status</th></tr></thead>
+            <thead><tr><?php if ($bulk): ?><th class="we-check-col"><input type="checkbox" class="form-check-input" data-bulk-all="bulkForm" aria-label="Select all"></th><?php endif; ?><th>Domain</th><th>Source</th><th>Customer</th><th>Expires</th><th>DNS</th><th>SSL</th><th>Status</th></tr></thead>
             <tbody>
             <?php foreach ($page['rows'] as $d): ?>
                 <tr>
+                    <?php if ($bulk): ?><td><input type="checkbox" class="form-check-input" name="domains[]" value="<?= (int) $d['id'] ?>" form="bulkForm" data-bulk-item aria-label="Select <?= e($d['name']) ?>"></td><?php endif; ?>
                     <td><a class="fw-medium" href="<?= e(url('/admin/domains/' . $d['id'])) ?>"><?= e($d['name']) ?></a></td>
                     <td><?= partial('partials/source_badge', ['source' => $d['source']]) ?></td>
                     <td class="small"><?= $d['customer_id'] ? '<a href="' . e(url('/admin/customers/' . $d['customer_id'])) . '">' . e($d['customer_name']) . '</a>' : '<span class="badge text-bg-light border">Unassigned</span>' ?></td>
@@ -45,3 +47,4 @@
     <?php endif; ?>
 </div>
 <?= partial('partials/pagination', ['p' => $page]) ?>
+<?php if ($bulk && $page['rows']): ?><?= partial('partials/bulk_bar', ['what' => 'domains']) ?><?php endif; ?>

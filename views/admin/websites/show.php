@@ -88,6 +88,7 @@ $apiLinked = $w['provider_id'] && $w['external_username'] && ($w['driver'] ?? 'm
         </div>
     </div>
     <div class="col-lg-6">
+        <?php if ($manage): ?><?= partial('partials/nodejs_card', ['w' => $w, 'app' => $nodeApp, 'url' => '/admin/websites/' . $w['id'] . '/nodejs', 'admin' => true]) ?><?php endif; ?>
         <?= partial('partials/ssl_card', ['ssl' => $ssl, 'hostname' => $w['domain'], 'checkUrl' => '/admin/ssl/check', 'admin' => true]) ?>
         <?php if ($apiLinked && $manage): ?>
             <div class="d-flex gap-2 mb-3">

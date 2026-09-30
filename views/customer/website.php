@@ -48,6 +48,7 @@ $tools = [
         <?php endif; ?>
     </div>
     <div class="col-lg-6">
+        <?php if ($nodeAllowed): ?><?= partial('partials/nodejs_card', ['w' => $w, 'app' => $nodeApp, 'url' => '/customer/websites/' . $w['id'] . '/nodejs', 'admin' => false]) ?><?php endif; ?>
         <?= partial('partials/ssl_card', ['ssl' => $ssl, 'hostname' => $w['domain'], 'checkUrl' => '/customer/ssl/check']) ?>
         <?php if ($canSslInstall && (!$ssl || $ssl['status'] !== 'active')): ?>
             <form method="post" action="<?= e(url('/customer/websites/' . $w['id'] . '/ssl')) ?>" data-confirm="Install a free SSL certificate for <?= e($w['domain']) ?>?">

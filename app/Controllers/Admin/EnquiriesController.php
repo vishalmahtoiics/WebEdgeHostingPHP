@@ -52,6 +52,25 @@ final class EnquiriesController extends Controller
         $this->success($status === 'closed' ? '/admin/enquiries' : "/admin/enquiries/$id", $status === 'closed' ? 'Enquiry closed.' : 'Status updated.');
     }
 
+    /** Mark several enquiries as done, or delete them. */
+    public function bulk(): string
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))));
+        if (!$ids) {
+            $this->failed('/admin/enquiries', ['Select at least one enquiry first.']);
+        }
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        if (input_str('do') === 'delete') {
+            if (!can('customers.manage')) {
+                abort(403);
+            }
+            $n = DB::run("DELETE FROM enquiries WHERE id IN ($in)", $ids)->rowCount();
+            $this->success('/admin/enquiries', "$n enquir" . ($n === 1 ? 'y' : 'ies') . ' deleted.');
+        }
+        $n = DB::run("UPDATE enquiries SET status = 'closed' WHERE id IN ($in)", $ids)->rowCount();
+        $this->success('/admin/enquiries', "$n enquir" . ($n === 1 ? 'y' : 'ies') . ' marked as done.');
+    }
+
     public function destroy(int $id): string
     {
         $e = $this->requireFound(DB::one('SELECT id, name FROM enquiries WHERE id = ?', [$id]));

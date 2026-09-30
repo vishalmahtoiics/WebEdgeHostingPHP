@@ -271,3 +271,25 @@ body.we-loading-open { overflow: hidden; }
 .wm-settings { padding: 1.25rem 1.5rem; max-width: 980px; }
 .wm-settings .card { border-color: var(--wm-line); border-radius: 14px; }
 .wm-login-mark { width: 64px; height: 64px; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #fff; background: var(--we-primary); box-shadow: 0 10px 25px color-mix(in srgb, var(--we-primary) 35%, transparent); }
+
+/* Bulk selection action bar */
+.we-bulk { position: sticky; bottom: 1rem; z-index: 20; margin-top: 1rem; display: none; }
+.we-bulk.show, .we-bulk.we-bulk-static { display: block; }
+.we-bulk-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem; padding: .75rem 1rem; border-radius: 14px; background: #0f172a; color: #e2e8f0; box-shadow: 0 16px 40px -12px rgba(15, 23, 42, .45); }
+.we-bulk-inner .btn-link { color: #93c5fd; text-decoration: none; }
+.we-bulk-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+.we-bulk-controls .form-select { min-width: 220px; width: auto; }
+.we-bulk .form-check-label { color: #cbd5e1; }
+.we-bulk-static .we-bulk-inner { background: #f8fafc; color: inherit; border: 1px solid #e5e7eb; box-shadow: none; }
+.we-bulk-static .form-check-label { color: inherit; }
+.we-check-col { width: 1%; }
+.we-pick-list { max-height: 320px; overflow: auto; }
+
+/* Console output (Node.js build and app logs) */
+.we-console { background: #0b1220; color: #d1d5db; border-radius: 10px; padding: .9rem 1rem; font-size: .8rem; line-height: 1.5; max-height: 420px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0 0 .5rem; }
+.we-console-sm { max-height: 300px; }
+.we-log-time { color: #64748b; }
+.we-log-error { color: #f87171; font-weight: 600; }
+.we-log-warn { color: #fbbf24; }
+.we-log-info, .we-log-log { color: #60a5fa; }
+.we-log-debug, .we-log-trace { color: #94a3b8; }

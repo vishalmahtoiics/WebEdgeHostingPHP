@@ -190,6 +190,29 @@ Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company w
 - **Contact form messages** are saved under *Communication → Website enquiries* and emailed to the admin alert addresses (*Settings → Email (SMTP) & alerts*). Spam protection is a hidden honeypot field, CSRF, and at most 5 messages per hour from one IP.
 - **Settings → Website** can hide the Admin login link, turn off the contact form, or switch the website off entirely. With the website off, `/` goes straight to the client login as before.
 
+## Node.js apps (zip or GitHub / GitLab)
+
+Customers (and admins) can deploy Node.js apps to Node.js websites from the website page → **Node.js app**:
+
+1. **Upload a zip** of the project (the folder with `package.json`, without `node_modules`), or enter a **GitHub / GitLab repository** and branch. Private repositories need a read-only access token, which is stored encrypted.
+2. The panel sends the zip to the website (Hostinger's upload API) and **detects the build settings** from `package.json` (framework, Node.js version, build script, folders, entry file). You review them and tick the confirmation — a deploy replaces the website's files.
+3. The build runs at Hostinger and its **log is shown live**. If it fails, "Why did it fail?" shows Hostinger's explanation and suggested fix.
+
+Also on that page: **environment variables** (saved at the provider and restart the app; values are stored encrypted and never shown in full), **Restart app**, **app logs** (console output), **deploy history**, **Deploy latest** from the saved branch, and **Deploy on every push**: add the shown webhook address to the repository (GitHub → Settings → Webhooks, content type `application/json`; GitLab → Settings → Webhooks, push events). Pushes to the branch then deploy automatically with the saved settings.
+
+- **Where it works:** websites created as a *Node.js Web App* in hPanel (Business or Cloud plans), linked through a Hostinger provider account. If Hostinger reports a website as another type, an admin can still open the page and click *Enable Node.js deploys*.
+- **Who can use it:** *Settings → Node.js apps* switches it on or off for all customers, sets the maximum zip size and allows or blocks Git deploys. On a customer's edit page you can allow or block that customer individually.
+- **Upload size** is also limited by PHP's `upload_max_filesize` / `post_max_size` (hPanel → Advanced → PHP Configuration). Git deploys are downloaded by the server, so they are not limited by the browser upload.
+- Built against the endpoints in Hostinger's OpenAPI spec v1.56 and tested with a mock server, **not** a live Hostinger account — try one deploy on a test website first.
+
+## Selecting many items at once
+
+- **Websites, Domains and Email lists** have checkboxes (and a select-all box). Select items and a bar appears at the bottom: choose a customer and **Assign**, or **Unassign**. With *Include linked website, domain & email* (on by default), everything with the same name moves together — a domain brings its website, its subdomain websites and its email domain. Staff limited to certain domains can only move those; anything else is skipped and counted.
+- **Customer page → Websites & domains → Add existing services:** tick unassigned domains, websites and email domains (with *All* per group) and assign them to that customer in one go.
+- **Website enquiries:** mark many as done or delete them together.
+- **Staff users → Only selected domains:** *Select all shown* / *Clear* next to the filter, with a live count.
+- The customer gets one notification for a whole batch instead of one per item.
+
 ## Webmail (built in, at /mails)
 
 Customers read and send email at **`https://yourpanel/mails`**. Nothing needs installing: it's part of the panel.
@@ -230,7 +253,7 @@ How it works:
 
 ## Hostinger API notes
 
-- The integration is built against Hostinger's official OpenAPI spec (v1.55, `github.com/hostinger/api`). During development it was tested against a mock server that follows the same request and response shapes, **not against a live Hostinger account**. Test with your own token before you rely on it.
+- The integration is built against Hostinger's official OpenAPI spec (v1.56, `github.com/hostinger/api`). During development it was tested against a mock server that follows the same request and response shapes, **not against a live Hostinger account**. Test with your own token before you rely on it.
 - Website creation is asynchronous at Hostinger. The first website on a new plan needs a datacenter code.
 - Email uses the same API token (`/api/mail/v1`: mail orders, mailboxes, aliases).
 - Hostinger's file API is read-only, so the file manager uses direct disk access (same hosting account) or FTP/FTPS instead.

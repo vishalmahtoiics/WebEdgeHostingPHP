@@ -58,7 +58,7 @@ final class WebsiteService
         return $id;
     }
 
-    public static function assign(int $websiteId, ?int $customerId): void
+    public static function assign(int $websiteId, ?int $customerId, bool $notify = true): void
     {
         $w = DB::one('SELECT * FROM websites WHERE id = ?', [$websiteId]);
         if ((int) $w['customer_id'] === (int) $customerId) {
@@ -70,7 +70,7 @@ final class WebsiteService
             DB::run('UPDATE hosting_databases SET customer_id = ? WHERE website_id = ?', [$customerId, $websiteId]);
         });
         Logger::activity('websites', $customerId ? 'assign' : 'unassign', ($customerId ? 'Assigned' : 'Unassigned') . " website {$w['domain']}", 'website', $websiteId, $customerId ?? ($w['customer_id'] ? (int) $w['customer_id'] : null));
-        if ($customerId) {
+        if ($customerId && $notify) {
             NotificationService::notify($customerId, 'website_changed', "Website {$w['domain']} added to your account",
                 'You can now manage it from your control panel.', "/customer/websites/$websiteId");
         }

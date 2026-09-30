@@ -138,6 +138,21 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 
     // File manager
     $r->post('/websites/{id}/file-access', [Admin\FilesController::class, 'access'], ['perm' => 'websites.manage']);
+    $r->group('/websites/{id}/nodejs', ['perm' => 'websites.manage'], static function ($r): void {
+        $r->get('', [Admin\NodejsController::class, 'show']);
+        $r->post('/upload', [Admin\NodejsController::class, 'upload']);
+        $r->post('/git', [Admin\NodejsController::class, 'git']);
+        $r->post('/redeploy', [Admin\NodejsController::class, 'redeploy']);
+        $r->post('/build', [Admin\NodejsController::class, 'build']);
+        $r->post('/discard', [Admin\NodejsController::class, 'discard']);
+        $r->get('/builds/{build}', [Admin\NodejsController::class, 'poll']);
+        $r->get('/builds/{build}/analysis', [Admin\NodejsController::class, 'analysis']);
+        $r->get('/logs', [Admin\NodejsController::class, 'logs']);
+        $r->post('/env', [Admin\NodejsController::class, 'env']);
+        $r->post('/restart', [Admin\NodejsController::class, 'restart']);
+        $r->post('/auto-deploy', [Admin\NodejsController::class, 'autoDeploy']);
+        $r->post('/enable', [Admin\NodejsController::class, 'enable']);
+    });
     $r->group('/websites/{id}/files', ['perm' => 'files.manage'], static function ($r): void {
         $r->get('', [Admin\FilesController::class, 'index']);
         $r->get('/download', [Admin\FilesController::class, 'download']);
@@ -198,6 +213,8 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 
     $r->get('/notifications', [Admin\NotificationsController::class, 'index'], ['perm' => 'notifications.manage']);
     $r->post('/notifications/announce', [Admin\NotificationsController::class, 'announce'], ['perm' => 'notifications.manage']);
+    $r->post('/bulk/assign', [Admin\BulkController::class, 'assign']);
+    $r->post('/enquiries/bulk', [Admin\EnquiriesController::class, 'bulk'], ['perm' => 'customers.view']);
     $r->group('/site-services', ['perm' => 'settings.manage'], static function ($r): void {
         $r->get('', [Admin\SiteServicesController::class, 'index']);
         $r->form('/create', [Admin\SiteServicesController::class, 'create'], [Admin\SiteServicesController::class, 'store']);
@@ -248,6 +265,20 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
         $r->get('/websites', [Customer\HostingController::class, 'websites']);
         $r->get('/websites/{id}', [Customer\HostingController::class, 'website']);
         $r->post('/websites/{id}/ssl', [Customer\HostingController::class, 'installSsl']);
+    });
+    $r->group('/websites/{id}/nodejs', ['perm' => 'websites'], static function ($r): void {
+        $r->get('', [Customer\NodejsController::class, 'show']);
+        $r->post('/upload', [Customer\NodejsController::class, 'upload']);
+        $r->post('/git', [Customer\NodejsController::class, 'git']);
+        $r->post('/redeploy', [Customer\NodejsController::class, 'redeploy']);
+        $r->post('/build', [Customer\NodejsController::class, 'build']);
+        $r->post('/discard', [Customer\NodejsController::class, 'discard']);
+        $r->get('/builds/{build}', [Customer\NodejsController::class, 'poll']);
+        $r->get('/builds/{build}/analysis', [Customer\NodejsController::class, 'analysis']);
+        $r->get('/logs', [Customer\NodejsController::class, 'logs']);
+        $r->post('/env', [Customer\NodejsController::class, 'env']);
+        $r->post('/restart', [Customer\NodejsController::class, 'restart']);
+        $r->post('/auto-deploy', [Customer\NodejsController::class, 'autoDeploy']);
     });
     $r->group('', ['perm' => 'domains'], static function ($r): void {
         $r->get('/domains', [Customer\HostingController::class, 'domains']);
@@ -307,6 +338,8 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
 
 // Payment gateway webhooks: authenticated by the gateway's HMAC signature, not a session.
 $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay'], ['csrf' => false]);
+// Git push webhooks for Node.js apps: authenticated by the secret in the address.
+$router->post('/webhooks/nodejs/{id}/{secret}', [WebhookController::class, 'nodejs'], ['csrf' => false]);
 
 // Webmail (mailbox address + password; separate from panel accounts)
 $router->group('/mails', [], static function ($r): void {

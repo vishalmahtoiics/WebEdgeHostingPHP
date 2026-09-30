@@ -1,3 +1,4 @@
+<?php $bulk = can('websites.manage'); ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div class="small text-muted">
         <?php if ($unclaimed > 0): ?><i class="bi bi-cloud-download me-1"></i><a href="<?= e(url('/admin/resources', ['type' => 'website', 'state' => 'unclaimed'])) ?>"><?= $unclaimed ?> discovered website<?= $unclaimed === 1 ? '' : 's' ?> waiting to be claimed</a><?php endif; ?>
@@ -20,10 +21,11 @@
         <?= partial('partials/empty', ['icon' => 'window', 'message' => 'No websites found']) ?>
     <?php else: ?>
         <div class="table-responsive"><table class="table table-hover table-we">
-            <thead><tr><th>Website</th><th>Source</th><th>Customer</th><?php if (can('providers.view')): ?><th>Provider account</th><?php endif; ?><th>Databases</th><th>SSL</th><th>Status</th></tr></thead>
+            <thead><tr><?php if ($bulk): ?><th class="we-check-col"><input type="checkbox" class="form-check-input" data-bulk-all="bulkForm" aria-label="Select all"></th><?php endif; ?><th>Website</th><th>Source</th><th>Customer</th><?php if (can('providers.view')): ?><th>Provider account</th><?php endif; ?><th>Databases</th><th>SSL</th><th>Status</th></tr></thead>
             <tbody>
             <?php foreach ($page['rows'] as $w): ?>
                 <tr>
+                    <?php if ($bulk): ?><td><input type="checkbox" class="form-check-input" name="websites[]" value="<?= (int) $w['id'] ?>" form="bulkForm" data-bulk-item aria-label="Select <?= e($w['domain']) ?>"></td><?php endif; ?>
                     <td><a class="fw-medium" href="<?= e(url('/admin/websites/' . $w['id'])) ?>"><?= e($w['domain']) ?></a><?php if ($w['website_type']): ?><div class="small text-muted"><?= e(ucfirst($w['website_type'])) ?></div><?php endif; ?></td>
                     <td><?= partial('partials/source_badge', ['source' => $w['source']]) ?></td>
                     <td class="small"><?= $w['customer_id'] ? '<a href="' . e(url('/admin/customers/' . $w['customer_id'])) . '">' . e($w['customer_name']) . '</a>' : '<span class="badge text-bg-light border">Unassigned</span>' ?></td>
@@ -38,3 +40,4 @@
     <?php endif; ?>
 </div>
 <?= partial('partials/pagination', ['p' => $page]) ?>
+<?php if ($bulk && $page['rows']): ?><?= partial('partials/bulk_bar', ['what' => 'websites']) ?><?php endif; ?>
