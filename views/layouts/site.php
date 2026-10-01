@@ -52,12 +52,10 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
     <?php if ($v = trim((string) setting('seo.google_verification'))): ?><meta name="google-site-verification" content="<?= e(preg_replace('/^.*content="([^"]+)".*$/', '$1', $v)) ?>"><?php endif; ?>
     <?php if ($v = trim((string) setting('seo.bing_verification'))): ?><meta name="msvalidate.01" content="<?= e(preg_replace('/^.*content="([^"]+)".*$/', '$1', $v)) ?>"><?php endif; ?>
     <meta name="theme-color" content="<?= e($primary) ?>">
-    <?php if ($favicon !== ''): ?><link rel="icon" href="<?= e(url($favicon)) ?>"><?php endif; ?>
-    <link rel="stylesheet" href="<?= e(asset('assets/vendor/bootstrap/bootstrap.min.css')) ?>">
-    <link rel="stylesheet" href="<?= e(asset('assets/vendor/bootstrap-icons/bootstrap-icons.min.css')) ?>">
-    <link rel="stylesheet" href="<?= e(asset('assets/css/site.css')) ?>">
+    <?php if ($favicon !== ''): ?><link rel="icon" href="<?= e(url($favicon)) ?>"><?php else: ?><link rel="icon" href="data:image/svg+xml,<?= rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="' . $primary . '"/><text x="32" y="44" font-family="Arial,sans-serif" font-size="36" font-weight="700" fill="#fff" text-anchor="middle">' . e(mb_strtoupper(mb_substr(brand_name(), 0, 1))) . '</text></svg>') ?>"><?php endif; ?>
+    <link rel="stylesheet" href="<?= e(asset('assets/css/site.bundle.css')) ?>">
     <style>:root { --ws-primary: <?= e($primary) ?>; }</style>
-    <script src="<?= e(asset('assets/js/site.js')) ?>"></script>
+    <script src="<?= e(asset('assets/js/site.js')) ?>" defer></script>
     <?php if ($ga4): ?><script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($ga4) ?>"></script><?php endif; ?>
     <?= App\Support\Seo::jsonLd() ?>
 </head>
@@ -161,6 +159,6 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
         </div>
     </div>
 </footer>
-<script src="<?= e(asset('assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>"></script>
+<script src="<?= e(asset('assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>" defer></script>
 </body>
 </html>

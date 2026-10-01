@@ -19,6 +19,6 @@ $big = $big ?? false;
         </div>
         <<?= $big ? 'h2' : 'h3' ?> class="ws-post-title"><a href="<?= e(url('/blog/' . $p['slug'])) ?>"><?= e($p['title']) ?></a></<?= $big ? 'h2' : 'h3' ?>>
         <?php if ($p['excerpt']): ?><p><?= e($p['excerpt']) ?></p><?php endif; ?>
-        <a href="<?= e(url('/blog/' . $p['slug'])) ?>" class="ws-more">Read article <i class="bi bi-arrow-right"></i></a>
+        <a href="<?= e(url('/blog/' . $p['slug'])) ?>" class="ws-more">Read article<span class="visually-hidden">: <?= e($p['title']) ?></span> <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
     </div>
 </article>

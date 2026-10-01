@@ -12,9 +12,7 @@
         window.gtag('config', ga);
     }
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduce && 'IntersectionObserver' in window) {
-        root.classList.add('ws-anim');
-    }
+    var animate = !reduce && 'IntersectionObserver' in window;
 
     document.addEventListener('DOMContentLoaded', function () {
         var header = document.querySelector('.ws-header');
@@ -31,7 +29,9 @@
 
         // Reveal sections as they scroll into view.
         var items = document.querySelectorAll('.reveal');
-        if (root.classList.contains('ws-anim')) {
+        if (!animate) {
+            items.forEach(function (el) { el.classList.add('in'); });
+        } else {
             var io = new IntersectionObserver(function (entries) {
                 entries.forEach(function (en) {
                     if (en.isIntersecting) {

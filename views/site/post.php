@@ -54,7 +54,7 @@ $shareText = rawurlencode($p['title']);
                             <div class="ws-icon"><i class="bi bi-<?= e(SiteServices::icon($service['icon'])) ?>"></i></div>
                             <h2 class="h5 mt-3"><?= e($service['title']) ?></h2>
                             <p><?= e($service['summary']) ?></p>
-                            <a class="btn ws-btn ws-btn-primary w-100 mb-2" href="<?= e(url('/services/' . $service['slug'])) ?>">Learn more</a>
+                            <a class="btn ws-btn ws-btn-primary w-100 mb-2" href="<?= e(url('/services/' . $service['slug'])) ?>">Learn more<span class="visually-hidden"> about <?= e($service['title']) ?></span></a>
                             <a class="btn ws-btn ws-btn-outline w-100" href="<?= e(url('/', ['service' => $service['slug']])) ?>#contact">Get a free quote</a>
                         </div>
                     <?php else: ?>

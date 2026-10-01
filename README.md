@@ -192,7 +192,7 @@ Visitors to the site root (e.g. `https://webedgesolution.in/`) see the company w
 
 ## Blog
 
-The website has a blog at `/blog` with categories (`/blog/category/...`), articles (`/blog/<address>`), an RSS feed (`/blog/feed.xml`) and the latest three posts on the home page. Six starter guides are included (cheap web hosting in India, digital marketing for small business, personal branding, a website design checklist, custom software and local SEO) — edit them to add your own experience.
+The website has a blog at `/blog` with categories (`/blog/category/...`), articles (`/blog/<address>`), an RSS feed (`/blog/feed.xml`) and the latest three posts on the home page. 26 starter guides are included across four topic clusters — hosting (cheap hosting, shared/VPS/cloud, WordPress hosting, domains, business email, SSL, speed, Node.js deploys), marketing (digital marketing, SEO for beginners, local SEO, Google vs Facebook ads, Instagram, lead generation, WhatsApp, choosing an agency), branding (personal branding, LinkedIn, brand identity) and websites/apps/software (website cost, app cost, design checklist, WordPress vs custom, online stores, custom software, maintenance). Each passes the 14-point checklist, links to related guides and services, and ends with an FAQ. Edit them to add your own experience and examples.
 
 Write posts under **Communication → Blog posts** (Super Admin, or staff with the *Write & publish blog posts* permission):
 
@@ -210,7 +210,9 @@ Built in for the public website (the panels, logins and webmail are kept out of 
 - **Structured data (schema.org JSON-LD):** your business (*Organization / ProfessionalService*: name, logo, contact, address, area served India, social profiles, price range from your cheapest hosting plan), the website, each **Service** (hosting plans as offers with INR prices), **FAQ** answers (home page and per service), **BlogPosting** for articles and **breadcrumbs**.
 - **`/sitemap.xml`** (home, services, blog, categories and posts with last-modified dates) and **`/robots.txt`** (points to the sitemap and keeps panels out).
 - **Service FAQs:** add "Q: … / A: …" pairs to any service; they show on its page and to Google.
-- **Speed:** compressed text files and long browser caching for versioned assets (`public/.htaccess`), lazy-loaded images with fixed sizes.
+- **Speed:** the public pages load one small stylesheet (`public/assets/css/site.bundle.css`, only the Bootstrap rules and icons the site uses) and a subset icon font, scripts are deferred, text files are compressed and versioned assets are cached long-term (`public/.htaccess`). Lighthouse scores on the home, service, blog and article pages: Performance 97–100, Accessibility 100, SEO 100 (Best Practices reaches 100 once the site runs on HTTPS).
+- **After changing the public design** (`views/site/*`, `views/layouts/site.php` or `public/assets/css/site.css`), rebuild the bundle: `npm i purgecss@6 && pip install fonttools brotli && node tools/build-site-assets.mjs`.
+- **FAQ sections in articles:** a `## Frequently asked questions` heading followed by `### Question` / answer pairs is turned into FAQ structured data automatically.
 - **Settings → SEO & social:** Google Search Console and Bing verification codes (paste the whole meta tag or just the code), **Google Analytics 4** ID (public pages only), sharing image, and your Facebook, Instagram, LinkedIn, YouTube and X profiles (shown in the footer and in the structured data).
 
 ### After you go live — steps that matter most for ranking

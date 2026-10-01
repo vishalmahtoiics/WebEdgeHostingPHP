@@ -37,6 +37,29 @@ final class Blog
         return null;
     }
 
+    /**
+     * Questions and answers from a "## Frequently asked questions" section
+     * (each question a ### heading), for FAQ structured data.
+     * @return array<int, array{0: string, 1: string}>
+     */
+    public static function faqs(string $body): array
+    {
+        if (!preg_match('/^##\s+(?:frequently asked questions|faqs?)\b.*$/mi', $body, $m, PREG_OFFSET_CAPTURE)) {
+            return [];
+        }
+        $section = preg_split('/^##\s/m', substr($body, $m[0][1] + strlen($m[0][0])))[0];
+        preg_match_all('/^###\s+(.+?)\s*$(.*?)(?=^###\s|\z)/ms', $section, $mm, PREG_SET_ORDER);
+        $out = [];
+        foreach ($mm as $x) {
+            $q = Markdown::plain($x[1]);
+            $a = Markdown::plain($x[2]);
+            if ($q !== '' && $a !== '') {
+                $out[] = [$q, $a];
+            }
+        }
+        return $out;
+    }
+
     public static function readingMinutes(string $body): int
     {
         return max(1, (int) round(Markdown::words($body) / 200));

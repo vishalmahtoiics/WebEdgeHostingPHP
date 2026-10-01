@@ -7,7 +7,7 @@
     --ws-accent: #8b5cf6;
     --ws-ink: #0b1324;
     --ws-text: #334155;
-    --ws-muted: #64748b;
+    --ws-muted: #5b677a;
     --ws-line: #e6eaf2;
     --ws-bg: #ffffff;
     --ws-tint: #f6f8fc;
@@ -233,9 +233,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 .ws-to-top { margin-left: auto; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, .08); color: #fff !important; }
 .ws-to-top:hover { background: rgba(255, 255, 255, .16); }
 
-/* Scroll reveal (only when JavaScript and motion are available) */
-.ws-anim .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease var(--d, 0ms), transform .7s cubic-bezier(.2, .7, .2, 1) var(--d, 0ms); }
-.ws-anim .reveal.in { opacity: 1; transform: none; }
+/* Scroll reveal (only when JavaScript runs and motion is welcome) */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease var(--d, 0ms), transform .7s cubic-bezier(.2, .7, .2, 1) var(--d, 0ms); }
+    .reveal.in { opacity: 1; transform: none; }
+}
 @media (prefers-reduced-motion: reduce) {
     .ws-blob, .ws-float { animation: none; }
     .ws-mock { transform: none; }
@@ -433,3 +435,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 .ws-social { display: flex; gap: .5rem; }
 .ws-social a { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, .08); color: #fff !important; }
 .ws-social a:hover { background: var(--ws-primary); }
+
+/* Links inside running text are underlined so they stand out without colour. */
+.ws-body main p a:not(.btn), .ws-faq p a, .ws-section-head p a { text-decoration: underline; text-underline-offset: 3px; }

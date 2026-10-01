@@ -89,7 +89,7 @@ final class BlogController extends Controller
             'published' => $preview ? null : $p['published_at'],
             'modified' => $p['updated_at'],
             'robots' => $preview ? 'noindex, nofollow' : null,
-            'schema' => [Seo::article($p, $url), Seo::breadcrumbs($crumbs)],
+            'schema' => array_values(array_filter([Seo::article($p, $url), Seo::breadcrumbs($crumbs), ($faqs = Blog::faqs((string) $p['body'])) ? Seo::faq($faqs) : null])),
         ]);
         $related = DB::all('SELECT id, slug, title, excerpt, cover_image, cover_alt, category, published_at, body FROM blog_posts WHERE ' . Blog::PUBLISHED . ' AND id <> ? ORDER BY (category <=> ?) DESC, published_at DESC LIMIT 3', [$p['id'], $p['category']]);
         return $this->view('site/post', [

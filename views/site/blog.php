@@ -23,6 +23,7 @@ $first = $page === 1 && $category === null && $posts ? array_shift($posts) : nul
             <div class="ws-card text-center ws-empty-plans"><div class="ws-icon mx-auto"><i class="bi bi-journal-text"></i></div><h2 class="h4 mt-3">Articles are on their way</h2><p>Check back soon, or <a href="<?= e(url('/#contact')) ?>">ask us a question</a>.</p></div>
         <?php endif; ?>
         <?php if ($first): ?><div class="mb-4 reveal"><?= partial('site/post_card', ['p' => $first, 'big' => true]) ?></div><?php endif; ?>
+        <?php if ($posts): ?><h2 class="visually-hidden"><?= $category !== null ? e($category) . ' articles' : ($page > 1 ? 'Older articles' : 'More articles') ?></h2><?php endif; ?>
         <div class="row g-4">
             <?php foreach ($posts as $i => $p): ?>
                 <div class="col-md-6 col-lg-4 reveal" style="--d: <?= ($i % 3) * 60 ?>ms"><?= partial('site/post_card', ['p' => $p]) ?></div>
