@@ -71,6 +71,11 @@
             document.querySelectorAll('main section[id], main section').forEach(function (s) { spy.observe(s); });
         }
 
+        // Fill AdSense ad units placed in the page (Auto ads need nothing here).
+        document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(function () {
+            try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* ad blockers */ }
+        });
+
         // Keep only one FAQ item open at a time.
         var faqs = document.querySelectorAll('.ws-faq details');
         faqs.forEach(function (d) {

@@ -38,6 +38,17 @@ $shareText = rawurlencode($p['title']);
                         <ol><?php foreach ($toc as $t): ?><li class="lvl-<?= (int) $t['level'] ?>"><a href="#<?= e($t['id']) ?>"><?= e($t['text']) ?></a></li><?php endforeach; ?></ol>
                     </details>
                 <?php endif; ?>
+                <?php
+                // One in-article ad before the third section, when AdSense is on and an in-article unit is set.
+                if (App\Support\AdsReadiness::enabled() && ($slot = App\Support\AdsReadiness::articleSlot()) && !$preview) {
+                    $parts = preg_split('/(?=<h2 )/', $html);
+                    if (count($parts) > 3) {
+                        $ad = '<div class="ws-ad" aria-label="Advertisement"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="' . e((string) App\Support\AdsReadiness::client()) . '" data-ad-slot="' . e($slot) . '"></ins></div>';
+                        array_splice($parts, 3, 0, [$ad]);
+                        $html = implode('', $parts);
+                    }
+                }
+                ?>
                 <div class="ws-prose-body"><?= $html ?></div>
                 <div class="ws-share">
                     <span>Share this article:</span>

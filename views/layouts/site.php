@@ -12,6 +12,12 @@ $dashboard = Auth::isAdmin() ? '/admin' : (Auth::isCustomer() ? '/customer' : nu
 $webmail = setting('webmail.enabled') ? url('/mails') : null;
 $home = url('/');
 $nav = ['#plans' => 'Hosting', '#why' => 'Why us', '#contact' => 'Contact'];
+$sitePages = array_column(App\Support\SitePages::published(), 'title', 'slug');
+$curPath = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+if (isset($sitePages['contact'])) {
+    unset($nav['#contact'], $nav['#why']);
+}
+$legal = array_intersect_key(['privacy-policy' => 'Privacy Policy', 'terms-and-conditions' => 'Terms & Conditions', 'refund-policy' => 'Refund Policy', 'disclaimer' => 'Disclaimer'], $sitePages);
 $menuServices = App\Support\SiteServices::grouped();
 $pageTitle = App\Support\Seo::title();
 $pageDesc = App\Support\Seo::description();
@@ -57,6 +63,8 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
     <style>:root { --ws-primary: <?= e($primary) ?>; }</style>
     <script src="<?= e(asset('assets/js/site.js')) ?>" defer></script>
     <?php if ($ga4): ?><script async src="https://www.googletagmanager.com/gtag/js?id=<?= e($ga4) ?>"></script><?php endif; ?>
+    <?php if ($adsClient = App\Support\AdsReadiness::client()): ?><meta name="google-adsense-account" content="<?= e($adsClient) ?>"><?php endif; ?>
+    <?php if (App\Support\AdsReadiness::enabled()): ?><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<?= e($adsClient) ?>" crossorigin="anonymous"></script><?php endif; ?>
     <?= App\Support\Seo::jsonLd() ?>
 </head>
 <body class="ws-body">
@@ -89,6 +97,9 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
                         <li class="nav-item"><a class="nav-link" href="<?= e($home . $href) ?>"><?= e($label) ?></a></li>
                     <?php endforeach; ?>
                     <li class="nav-item"><a class="nav-link<?= str_starts_with((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), url('/blog')) ? ' active' : '' ?>" href="<?= e(url('/blog')) ?>">Blog</a></li>
+                    <?php foreach (['about' => 'About', 'contact' => 'Contact'] as $pslug => $plabel): if (!isset($sitePages[$pslug])) { continue; } ?>
+                        <li class="nav-item"><a class="nav-link<?= $curPath === url('/' . $pslug) ? ' active' : '' ?>" href="<?= e(url('/' . $pslug)) ?>"<?= $curPath === url('/' . $pslug) ? ' aria-current="page"' : '' ?>><?= e($plabel) ?></a></li>
+                    <?php endforeach; ?>
                     <?php if ($webmail): ?><li class="nav-item"><a class="nav-link" href="<?= e($webmail) ?>"><i class="bi bi-envelope me-1"></i>Webmail</a></li><?php endif; ?>
                 </ul>
                 <div class="ws-actions">
@@ -134,8 +145,10 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
                 </ul>
             </div>
             <div class="col-6 col-lg-2">
-                <div class="ws-footer-title">Sign in</div>
+                <div class="ws-footer-title">Company</div>
                 <ul class="ws-footer-links">
+                    <?php if (isset($sitePages['about'])): ?><li><a href="<?= e(url('/about')) ?>">About us</a></li><?php endif; ?>
+                    <?php if (isset($sitePages['contact'])): ?><li><a href="<?= e(url('/contact')) ?>">Contact us</a></li><?php endif; ?>
                     <li><a href="<?= e(url('/login')) ?>">Client area</a></li>
                     <?php if ($webmail): ?><li><a href="<?= e($webmail) ?>">Webmail</a></li><?php endif; ?>
                     <?php if (setting('site.show_admin_login')): ?><li><a href="<?= e(url('/admin/login')) ?>">Admin login</a></li><?php endif; ?>
@@ -154,6 +167,7 @@ $logoMark = static function (string $cls = '') use ($siteName): string {
         </div>
         <div class="ws-footer-bottom">
             <span>&copy; <?= date('Y') ?> <?= e(setting('company.legal_name') ?: $siteName) ?>. All rights reserved.</span>
+            <?php if ($legal): ?><nav class="ws-legal" aria-label="Legal"><?php foreach ($legal as $lslug => $llabel): ?><a href="<?= e(url('/' . $lslug)) ?>"><?= e($llabel) ?></a><?php endforeach; ?></nav><?php endif; ?>
             <?php if ($ft = setting('brand.footer_text')): ?><span><?= e($ft) ?></span><?php endif; ?>
             <a href="#top" class="ws-to-top" aria-label="Back to top"><i class="bi bi-arrow-up"></i></a>
         </div>

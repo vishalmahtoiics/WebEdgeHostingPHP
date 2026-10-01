@@ -48,6 +48,15 @@ final class SettingsSchema
                     'social.x' => ['label' => 'X (Twitter) profile URL', 'type' => 'url', 'default' => ''],
                 ],
             ],
+            'ads' => [
+                'label' => 'Google AdSense', 'icon' => 'badge-ad',
+                'fields' => [
+                    'ads.client' => ['label' => 'AdSense publisher ID', 'type' => 'text', 'default' => '', 'help' => 'Looks like ca-pub-1234567890123456 (AdSense → Account → Settings). Adds the AdSense verification tag and your /ads.txt file straight away.'],
+                    'ads.enabled' => ['label' => 'Show ads on the public website (Auto ads)', 'type' => 'bool', 'default' => '0', 'help' => 'Turn on once AdSense has approved the site, or when AdSense asks you to place the code. Ads never appear in the admin or client panels.'],
+                    'ads.article_slot' => ['label' => 'In-article ad unit slot ID (optional)', 'type' => 'text', 'default' => '', 'help' => 'Create an "In-article" ad unit in AdSense and paste its data-ad-slot number to show one ad in the middle of every blog article.'],
+                    'ads.txt_extra' => ['label' => 'Extra lines for ads.txt (optional)', 'type' => 'textarea', 'default' => '', 'help' => 'Only if another ad network asks you to add lines. The Google line is added automatically.'],
+                ],
+            ],
             'branding' => [
                 'label' => 'Branding', 'icon' => 'palette',
                 'fields' => [

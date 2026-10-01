@@ -438,3 +438,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 
 /* Links inside running text are underlined so they stand out without colour. */
 .ws-body main p a:not(.btn), .ws-faq p a, .ws-section-head p a { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Footer legal links and company/legal pages */
+.ws-legal { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; }
+.ws-legal a { color: #94a3b8 !important; }
+.ws-legal a:hover { color: #fff !important; }
+.ws-page-body { max-width: 52rem; }
+.ws-page-body h2 { font-size: 1.35rem; }
+.ws-ad { margin: 2rem 0; min-height: 120px; }

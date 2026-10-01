@@ -23,6 +23,9 @@ final class SeoController extends Controller
                 $urls[] = ['/services/' . $s['slug'], $s['updated_at'], '0.9'];
             }
             $urls[] = ['/blog', $latest, '0.8'];
+            foreach (\App\Support\SitePages::published() as $pg) {
+                $urls[] = ['/' . $pg['slug'], $pg['updated_at'], in_array($pg['slug'], ['about', 'contact'], true) ? '0.6' : '0.3'];
+            }
             foreach (Blog::categories() as $c) {
                 $urls[] = ['/blog/category/' . $c['slug'], $latest, '0.5'];
             }
@@ -37,14 +40,25 @@ final class SeoController extends Controller
         return $out . '</urlset>';
     }
 
+    /** Authorised ad sellers (Google AdSense), built from Settings → Google AdSense. */
+    public function adsTxt(): string
+    {
+        $txt = \App\Support\AdsReadiness::adsTxt();
+        if ($txt === null) {
+            abort(404);
+        }
+        header('Content-Type: text/plain; charset=utf-8');
+        return $txt;
+    }
+
     public function robots(): string
     {
         header('Content-Type: text/plain; charset=utf-8');
         if (!Settings::bool('site.public_home')) {
             return "User-agent: *\nDisallow: /\n";
         }
-        $lines = ['User-agent: *', 'Allow: /'];
-        foreach (['/admin', '/customer', '/mails', '/webhooks', '/login', '/forgot-password', '/reset-password', '/contact', '/install.php'] as $p) {
+        $lines = ['User-agent: Mediapartners-Google', 'Allow: /', '', 'User-agent: *', 'Allow: /'];
+        foreach (['/admin', '/customer', '/mails', '/webhooks', '/login', '/forgot-password', '/reset-password', '/install.php'] as $p) {
             $lines[] = 'Disallow: ' . $p;
         }
         $lines[] = '';

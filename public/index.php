@@ -39,7 +39,7 @@ if ($base !== '' && str_starts_with($path, $base)) {
 $path = '/' . ltrim($path, '/');
 
 // Only the public website belongs in search results; panels, logins and webmail do not.
-if (!preg_match('#^/($|services/|blog(/|$)|sitemap\.xml$|robots\.txt$)#', $path)) {
+if (!preg_match('#^/($|services/|blog(/|$)|(about|contact|privacy-policy|terms-and-conditions|refund-policy|disclaimer)$|sitemap\.xml$|robots\.txt$|ads\.txt$)#', $path)) {
     header('X-Robots-Tag: noindex, nofollow');
 }
 

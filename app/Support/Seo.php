@@ -258,6 +258,11 @@ final class Seo
     /** Security headers for public pages (allows Google Analytics and https images when needed). */
     public static function sendHeaders(): void
     {
+        if (AdsReadiness::enabled()) {
+            // Google AdSense loads scripts, frames and beacons from many Google domains.
+            header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline'; font-src 'self' https:; img-src 'self' data: https:; frame-src https:; connect-src 'self' https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'");
+            return;
+        }
         $ga = self::ga4() !== null;
         $script = "'self'" . ($ga ? ' https://www.googletagmanager.com' : '');
         $connect = "'self'" . ($ga ? ' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com' : '');

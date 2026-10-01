@@ -108,7 +108,7 @@ final class HomeController extends Controller
             $svc = SiteServices::findActive(substr($interest, 8));
             $label = $svc ? $svc['title'] : null;
         }
-        $back = input_str('back') !== '' && preg_match('#^/services/[a-z0-9-]+$#', input_str('back')) ? input_str('back') : '/';
+        $back = input_str('back') !== '' && preg_match('#^(/services/[a-z0-9-]+|/contact)$#', input_str('back')) ? input_str('back') : '/';
 
         $errors = [];
         if (mb_strlen($name) < 2) {

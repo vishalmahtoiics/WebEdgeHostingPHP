@@ -208,7 +208,7 @@ Built in for the public website (the panels, logins and webmail are kept out of 
 - **Titles and descriptions** for every page: the home page (*Settings → SEO & social*), each service (*Website services → edit → Search engine*) and each blog post.
 - **Canonical addresses, Open Graph and Twitter cards** (with a sharing image) so links look good on WhatsApp, LinkedIn, Facebook and X.
 - **Structured data (schema.org JSON-LD):** your business (*Organization / ProfessionalService*: name, logo, contact, address, area served India, social profiles, price range from your cheapest hosting plan), the website, each **Service** (hosting plans as offers with INR prices), **FAQ** answers (home page and per service), **BlogPosting** for articles and **breadcrumbs**.
-- **`/sitemap.xml`** (home, services, blog, categories and posts with last-modified dates) and **`/robots.txt`** (points to the sitemap and keeps panels out).
+- **`/sitemap.xml`** (home, services, company and legal pages, blog, categories and posts with last-modified dates) and **`/robots.txt`** (points to the sitemap, keeps panels out, lets the AdSense crawler in).
 - **Service FAQs:** add "Q: … / A: …" pairs to any service; they show on its page and to Google.
 - **Speed:** the public pages load one small stylesheet (`public/assets/css/site.bundle.css`, only the Bootstrap rules and icons the site uses) and a subset icon font, scripts are deferred, text files are compressed and versioned assets are cached long-term (`public/.htaccess`). Lighthouse scores on the home, service, blog and article pages: Performance 97–100, Accessibility 100, SEO 100 (Best Practices reaches 100 once the site runs on HTTPS).
 - **After changing the public design** (`views/site/*`, `views/layouts/site.php` or `public/assets/css/site.css`), rebuild the bundle: `npm i purgecss@6 && pip install fonttools brotli && node tools/build-site-assets.mjs`.
@@ -224,6 +224,21 @@ Built in for the public website (the panels, logins and webmail are kept out of 
 5. Earn **links and mentions** from directories, partners and local business associations.
 
 Ranking takes months of consistent work and nobody can guarantee a position on Google; these features give the site a strong technical base.
+
+## Company & legal pages
+
+`/about`, `/contact` (with the enquiry form), `/privacy-policy`, `/terms-and-conditions`, `/refund-policy` and `/disclaimer` are included and linked from the header and footer (About, Contact) and the footer bar (legal pages). Edit them under **Communication → Website pages**. Placeholders such as `{{company}}`, `{{email}}`, `{{phone}}`, `{{address}}`, `{{jurisdiction}}` and `{{updated}}` are filled in from Settings. The default texts are written for an Indian web/marketing/hosting business (IT Act, DPDP Act, grievance officer, cookies, Google AdSense, 7-day hosting refund window) — **review them, especially the refund terms, before relying on them**. A hidden page returns 404 and leaves the footer and sitemap.
+
+## Google AdSense
+
+**Settings → Google AdSense:**
+
+- **Publisher ID** (`ca-pub-…`): adds the AdSense site-verification tag and serves `/ads.txt` (`google.com, pub-…, DIRECT, f08c47fec0942fa0`) immediately.
+- **Show ads (Auto ads):** loads the AdSense script on public pages only — never in the admin, client or webmail panels. The public pages' Content-Security-Policy is relaxed only while this is on.
+- **In-article ad unit (optional):** one ad in the middle of every blog article.
+- **Extra ads.txt lines** for other ad networks.
+
+**Website pages** shows an **AdSense readiness** checklist: HTTPS, 20+ articles averaging 600+ words, About/Contact/Privacy/Terms/Disclaimer published, privacy policy mentioning cookies and AdSense, contact details, publisher ID and ads code. In AdSense itself: add the site under *Sites*, keep the verification method on the meta tag or ads.txt, and turn on *Privacy & messaging → European regulations message* for visitors from the EEA/UK. Approval is decided by Google and can take days to weeks.
 
 ## Node.js apps (zip or GitHub / GitLab)
 

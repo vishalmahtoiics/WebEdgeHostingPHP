@@ -19,6 +19,7 @@ $router->get('/blog/category/{cat}', [App\Controllers\BlogController::class, 'ca
 $router->get('/blog/{slug}', [App\Controllers\BlogController::class, 'show']);
 $router->get('/sitemap.xml', [App\Controllers\SeoController::class, 'sitemap']);
 $router->get('/robots.txt', [App\Controllers\SeoController::class, 'robots']);
+$router->get('/ads.txt', [App\Controllers\SeoController::class, 'adsTxt']);
 
 // Authentication
 $router->group('', ['auth' => 'guest'], static function ($r): void {
@@ -228,6 +229,10 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
         $r->post('/{id}/status', [Admin\BlogController::class, 'status']);
         $r->post('/{id}/delete', [Admin\BlogController::class, 'destroy']);
     });
+    $r->group('/site-pages', ['perm' => 'settings.manage'], static function ($r): void {
+        $r->get('', [Admin\SitePagesController::class, 'index']);
+        $r->form('/{id}/edit', [Admin\SitePagesController::class, 'edit'], [Admin\SitePagesController::class, 'update']);
+    });
     $r->group('/site-services', ['perm' => 'settings.manage'], static function ($r): void {
         $r->get('', [Admin\SiteServicesController::class, 'index']);
         $r->form('/create', [Admin\SiteServicesController::class, 'create'], [Admin\SiteServicesController::class, 'store']);
@@ -370,3 +375,6 @@ $router->group('/mails', [], static function ($r): void {
     $r->form('/settings', [WebmailController::class, 'settings'], [WebmailController::class, 'saveSettings']);
     $r->post('/password', [WebmailController::class, 'password']);
 });
+
+// Company and legal pages (/about, /contact, /privacy-policy, ...). Registered last so every other route wins.
+$router->get('/{page}', [App\Controllers\PageController::class, 'show']);
