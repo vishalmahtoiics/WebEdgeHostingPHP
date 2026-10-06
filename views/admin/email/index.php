@@ -3,6 +3,7 @@
     <div class="small text-muted">
         <?php if ($unclaimed > 0): ?><i class="bi bi-cloud-download me-1"></i><a href="<?= e(url('/admin/resources', ['type' => 'mail_order', 'state' => 'unclaimed'])) ?>"><?= $unclaimed ?> email domain<?= $unclaimed === 1 ? '' : 's' ?> discovered at the provider</a> · <?php endif; ?>
         <a href="<?= e(url('/admin/email/routing')) ?>"><i class="bi bi-signpost me-1"></i>Email routing check</a>
+        · <a href="<?= e(url('/admin/email/requests')) ?>"><i class="bi bi-arrow-up-circle me-1"></i>Upgrade requests</a><?php if ($openRequests > 0): ?> <span class="badge text-bg-warning"><?= $openRequests ?> new</span><?php endif; ?>
     </div>
     <?php if (can('email.manage')): ?><a href="<?= e(url('/admin/email/create')) ?>" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add email domain</a><?php endif; ?>
 </div>
@@ -41,4 +42,15 @@
     <?php endif; ?>
 </div>
 <?= partial('partials/pagination', ['p' => $page]) ?>
-<?php if ($bulk && $page['rows']): ?><?= partial('partials/bulk_bar', ['what' => 'email domains']) ?><?php endif; ?>
+<?php if ($bulk && $page['rows']):
+    $extra = '';
+    if (\App\Core\Auth::isSuper()) {
+        $unit = static fn (string $n): string => '<select class="form-select form-select-sm w-auto" style="min-width:0" name="' . $n . '" aria-label="Unit"><option>GB</option><option>MB</option></select>';
+        $extra = '<div class="we-bulk-controls mt-2"><span class="small fw-semibold text-nowrap"><i class="bi bi-hdd me-1"></i>Email storage:</span>'
+            . '<input class="form-control form-control-sm" style="max-width:6rem" name="storage_total" inputmode="decimal" placeholder="Total" aria-label="Total storage">' . $unit('storage_total_unit')
+            . '<input class="form-control form-control-sm" style="max-width:6rem" name="storage_per" inputmode="decimal" placeholder="Each" aria-label="Size of each email account">' . $unit('storage_per_unit')
+            . '<div class="form-check form-check-inline m-0 small text-nowrap"><input class="form-check-input" type="checkbox" id="bulk_apply_all" name="apply_all" value="1"><label class="form-check-label" for="bulk_apply_all">Apply to existing accounts</label></div>'
+            . '<button class="btn btn-primary btn-sm" name="do" value="storage" formaction="' . e(url('/admin/email/bulk-storage')) . '"><i class="bi bi-hdd me-1"></i>Set storage</button></div>';
+    } ?>
+    <?= partial('partials/bulk_bar', ['what' => 'email domains', 'extra' => $extra]) ?>
+<?php endif; ?>

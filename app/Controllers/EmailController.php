@@ -49,6 +49,9 @@ abstract class EmailController extends Controller
             'base' => $this->domainPath($id),
             'isAdmin' => $this->isAdmin(),
             'canEdit' => $this->canEdit($d),
+            'canSetSizes' => $this->canSetSizes(),
+            'storage' => EmailService::storage($d),
+            'upgradeRequest' => DB::one("SELECT * FROM email_upgrade_requests WHERE email_domain_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1", [$id]),
             'trace' => $this->traceWithin($d, query('trace')),
             'servers' => \App\Mail\Webmail::serversFor($d),
             'serverDefaults' => \App\Mail\Webmail::defaults(),
@@ -63,6 +66,25 @@ abstract class EmailController extends Controller
     protected function canEdit(array $domain): bool
     {
         return $domain['status'] !== 'suspended' || $this->isAdmin();
+    }
+
+    /** Mailbox sizes and email storage are set only by a Super Admin, never by staff or customers. */
+    protected function canSetSizes(): bool
+    {
+        return $this->isAdmin() && \App\Core\Auth::isSuper();
+    }
+
+    /** Size from the form in MB: "quota_mb" with an optional "quota_unit" of MB or GB. Empty = null, invalid = -1. */
+    protected static function sizeInput(string $field, string $unitField): ?int
+    {
+        $v = str_replace(',', '.', trim(input_str($field)));
+        if ($v === '') {
+            return null;
+        }
+        if (!is_numeric($v) || (float) $v <= 0) {
+            return -1;
+        }
+        return (int) round((float) $v * (input_str($unitField) === 'GB' ? 1024 : 1));
     }
 
     /** Trace an address on this domain only (so customers cannot probe other domains). */
@@ -84,22 +106,23 @@ abstract class EmailController extends Controller
     public function storeMailbox(int $id): string
     {
         $d = $this->emailDomain($id);
-        $quota = input_str('quota_mb');
+        $quota = $this->canSetSizes() ? self::sizeInput('quota_mb', 'quota_unit') : null;
         $this->attempt($id, fn () => EmailService::createMailbox(
             $id,
             input_str('local_part'),
             (string) ($_POST['password'] ?? ''),
-            $quota === '' ? null : (ctype_digit($quota) ? (int) $quota : -1),
+            $quota,
             mb_substr(input_str('display_name'), 0, 150) ?: null,
-            !$this->isAdmin()
+            !$this->isAdmin(),
+            $this->canSetSizes()
         ), 'Mailbox ' . strtolower(input_str('local_part')) . '@' . $d['name'] . ' created.');
     }
 
     public function updateMailbox(int $id, int $mid): string
     {
         $this->mailboxIn($id, $mid);
-        $quota = input_str('quota_mb');
-        $this->attempt($id, fn () => EmailService::updateMailbox($mid, mb_substr(input_str('display_name'), 0, 150) ?: null, $quota === '' ? null : (ctype_digit($quota) ? (int) $quota : -1), !$this->isAdmin()), 'Mailbox updated.');
+        $quota = $this->canSetSizes() ? self::sizeInput('quota_mb', 'quota_unit') : null;
+        $this->attempt($id, fn () => EmailService::updateMailbox($mid, mb_substr(input_str('display_name'), 0, 150) ?: null, $quota, !$this->isAdmin(), $this->canSetSizes()), 'Mailbox updated.');
     }
 
     public function mailboxPassword(int $id, int $mid): string

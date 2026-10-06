@@ -79,6 +79,7 @@ final class EmailController extends BaseEmailController
                 $params,
                 30
             ),
+            'openRequests' => (int) DB::value("SELECT COUNT(*) FROM email_upgrade_requests WHERE status = 'open'"),
             'unclaimed' => can('providers.view') ? (int) DB::value("SELECT COUNT(*) FROM provider_resources WHERE type = 'mail_order' AND local_id IS NULL AND is_missing = 0") : 0,
         ]);
     }
@@ -236,5 +237,101 @@ final class EmailController extends BaseEmailController
         $this->success("/admin/email/$id", $limit === null
             ? "{$d['name']} now uses the customer's plan limit."
             : "{$d['name']} can have $limit email account" . ($limit === 1 ? '' : 's') . ": $used used, " . max(0, $limit - $used) . ' left.');
+    }
+
+    /** Super Admin: total email storage for this domain and the size of each email account. */
+    public function storage(int $id): string
+    {
+        $this->superOnly();
+        $this->emailDomain($id);
+        [$total, $per] = $this->storageInput("/admin/email/$id");
+        try {
+            $r = EmailService::setStorage($id, $total, $per, !empty($_POST['apply_all']));
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            $this->failed("/admin/email/$id", [$e->getMessage()]);
+        }
+        $this->closeRequests([$id], !empty($_POST['close_requests']));
+        $this->success("/admin/email/$id", 'Email storage saved: ' . ($total === null ? 'no total limit' : EmailService::sizeLabel($total) . ' in total')
+            . ', ' . ($per === null ? 'plan default' : EmailService::sizeLabel($per)) . ' per email account' . (!empty($_POST['apply_all']) ? " (applied to all {$r['mailboxes']} accounts)." : '.'));
+    }
+
+    /** Super Admin: the same storage for several email domains at once. */
+    public function bulkStorage(): string
+    {
+        $this->superOnly();
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($_POST['email'] ?? [])))));
+        if (!$ids) {
+            $this->failed('/admin/email', ['Select at least one email domain.']);
+        }
+        [$total, $per] = $this->storageInput('/admin/email');
+        $done = [];
+        $errors = [];
+        foreach ($ids as $id) {
+            $d = DB::one('SELECT id, name FROM email_domains WHERE id = ?', [$id]);
+            if (!$d || !DomainScope::allows($d['name'])) {
+                continue;
+            }
+            try {
+                EmailService::setStorage($id, $total, $per, !empty($_POST['apply_all']));
+                $done[] = $id;
+            } catch (\InvalidArgumentException | \RuntimeException $e) {
+                $errors[] = $d['name'] . ': ' . $e->getMessage();
+            }
+        }
+        $this->closeRequests($done, !empty($_POST['close_requests']));
+        if ($errors) {
+            flash('warning', 'Not changed — ' . implode(' ', array_slice($errors, 0, 5)));
+        }
+        $this->success('/admin/email', 'Email storage saved for ' . count($done) . ' email domain' . (count($done) === 1 ? '' : 's') . '.');
+    }
+
+    /** Customers' requests for more email storage. */
+    public function requests(): string
+    {
+        $status = in_array(query('status'), ['open', 'done', 'dismissed'], true) ? query('status') : 'open';
+        [$scopeSql, $scopeParams] = DomainScope::sql('e.name');
+        $from = "FROM email_upgrade_requests r JOIN email_domains e ON e.id = r.email_domain_id JOIN customers c ON c.id = r.customer_id
+                 LEFT JOIN users u ON u.id = r.user_id LEFT JOIN users h ON h.id = r.handled_by WHERE r.status = ? AND $scopeSql";
+        $rows = DB::all("SELECT r.*, e.name AS domain, e.storage_limit_mb, e.default_quota_mb, c.name AS customer_name, c.code AS customer_code, u.name AS user_name, u.email AS user_email, h.name AS handled_name
+             $from ORDER BY r.id DESC LIMIT 200", [$status, ...$scopeParams]);
+        return $this->view('admin/email/requests', ['title' => 'Email upgrade requests', 'rows' => $rows, 'status' => $status]);
+    }
+
+    public function closeRequest(int $rid): string
+    {
+        $r = $this->requireFound(DB::one('SELECT r.*, e.name FROM email_upgrade_requests r JOIN email_domains e ON e.id = r.email_domain_id WHERE r.id = ?', [$rid]));
+        DomainScope::assert($r['name']);
+        $status = input_str('status') === 'dismissed' ? 'dismissed' : 'done';
+        DB::update('email_upgrade_requests', ['status' => $status, 'handled_by' => \App\Core\Auth::id(), 'handled_at' => now()], 'id = ?', [$rid]);
+        \App\Core\Logger::activity('email', 'upgrade_request', "Email upgrade request for {$r['name']} marked $status", 'email_domain', (int) $r['email_domain_id'], (int) $r['customer_id']);
+        $this->success(input_str('back') === 'domain' ? '/admin/email/' . $r['email_domain_id'] : '/admin/email/requests', 'Request marked ' . ($status === 'done' ? 'done' : 'dismissed') . '.');
+    }
+
+    private function superOnly(): void
+    {
+        if (!\App\Core\Auth::isSuper()) {
+            abort(403, 'Only a Super Admin can change email storage.');
+        }
+    }
+
+    /** @return array{0: ?int, 1: ?int} total and per-account size in MB */
+    private function storageInput(string $back): array
+    {
+        $total = self::sizeInput('storage_total', 'storage_total_unit');
+        $per = self::sizeInput('storage_per', 'storage_per_unit');
+        if ($total === -1 || $per === -1) {
+            $this->failed($back, ['Enter sizes as numbers, for example 5 GB or 500 MB. Leave a box empty for no limit.']);
+        }
+        return [$total, $per];
+    }
+
+    /** Mark customers' open storage requests as done after giving them more space. */
+    private function closeRequests(array $domainIds, bool $close): void
+    {
+        if (!$close || !$domainIds) {
+            return;
+        }
+        $in = implode(',', array_map('intval', $domainIds));
+        DB::run("UPDATE email_upgrade_requests SET status = 'done', handled_by = ?, handled_at = NOW() WHERE status = 'open' AND email_domain_id IN ($in)", [\App\Core\Auth::id()]);
     }
 }

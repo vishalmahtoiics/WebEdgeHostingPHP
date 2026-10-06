@@ -57,6 +57,39 @@ $aliasAddresses = array_column($aliases, 'address');
         <div class="alert alert-info small d-flex gap-2"><i class="bi bi-envelope-plus"></i><span>You can create <strong><?= $left ?></strong> more email account<?= $left === 1 ? '' : 's' ?><?= $where ?> (<?= (int) $al['used'] ?> of <?= (int) $al['limit'] ?> used).</span></div>
     <?php endif; ?>
 <?php endif; ?>
+<?php
+$st = $storage;
+$sz = static fn (?int $mb): string => App\Services\EmailService::sizeLabel($mb);
+$pct = $st['total'] ? min(100, (int) round($st['allocated'] * 100 / max(1, $st['total']))) : null;
+$req = $upgradeRequest ?? null; ?>
+<?php if ($isAdmin && $req): ?>
+    <div class="alert alert-warning small d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <span><i class="bi bi-arrow-up-circle me-1"></i><strong>The customer asked to upgrade the email plan</strong> on <?= e(fmt_datetime($req['created_at'])) ?><?= $req['message'] ? ': “' . e($req['message']) . '”' : '.' ?></span>
+        <form method="post" action="<?= e(url('/admin/email/requests/' . $req['id'])) ?>"><?= csrf_field() ?><input type="hidden" name="back" value="domain"><button class="btn btn-sm btn-light">Mark done</button></form>
+    </div>
+<?php endif; ?>
+<div class="card mb-3">
+    <div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
+        <div class="flex-grow-1" style="min-width:240px">
+            <div class="fw-semibold mb-1"><i class="bi bi-hdd me-1"></i>Email storage</div>
+            <div class="small text-muted">
+                Total: <strong class="text-body"><?= e($st['total'] === null ? 'No total limit' : $sz($st['total'])) ?></strong>
+                · Each email account: <strong class="text-body"><?= e($st['per'] === null ? 'No limit' : $sz($st['per'])) ?></strong>
+                <?php if ($st['total'] !== null): ?> · Given to <?= (int) $st['mailboxes'] ?> account<?= $st['mailboxes'] === 1 ? '' : 's' ?>: <?= e($sz($st['allocated'])) ?>, <strong class="text-body"><?= e($sz(max(0, $st['total'] - $st['allocated']))) ?> left</strong><?php endif; ?>
+                <?php if ($st['used'] > 0): ?> · Mail stored: <?= e($sz($st['used'])) ?><?php endif; ?>
+            </div>
+            <?php if ($pct !== null): ?><div class="progress mt-2" style="height:6px" role="progressbar" aria-label="Email storage given to accounts" aria-valuenow="<?= $pct ?>" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar<?= $pct >= 90 ? ' bg-danger' : '' ?>" style="width:<?= $pct ?>%"></div></div><?php endif; ?>
+            <?php if (!$isAdmin): ?><div class="small text-muted mt-1">Storage sizes are set by our team. Need more space? Ask for an upgrade.</div><?php endif; ?>
+        </div>
+        <?php if (!$isAdmin): ?>
+            <?php if ($req): ?>
+                <span class="badge text-bg-light border p-2"><i class="bi bi-hourglass-split me-1"></i>Upgrade requested <?= e(time_ago($req['created_at'])) ?></span>
+            <?php else: ?>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#upgradeEmail"><i class="bi bi-arrow-up-circle me-1"></i>Upgrade email plan</button>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
 <div class="row g-3">
     <div class="col-xl-8">
         <div class="card mb-3">
@@ -74,8 +107,8 @@ $aliasAddresses = array_column($aliases, 'address');
                         $act = e(url($base . '/mailboxes/' . $m['id'])); ?>
                         <tr>
                             <td><div class="fw-medium"><?= e($m['address']) ?></div><?php if ($m['display_name']): ?><div class="small text-muted"><?= e($m['display_name']) ?></div><?php endif; ?></td>
-                            <td class="small"><?= $m['quota_mb'] ? e(App\Controllers\Admin\PlansController::limitLabel((int) $m['quota_mb'], 'MB')) : '—' ?></td>
-                            <td class="small"><?= $m['storage_used_mb'] !== null ? (int) $m['storage_used_mb'] . ' MB' : '—' ?></td>
+                            <td class="small"><?= $m['quota_mb'] ? e($sz((int) $m['quota_mb'])) : '—' ?></td>
+                            <td class="small<?= $m['quota_mb'] && (int) $m['storage_used_mb'] > (int) $m['quota_mb'] ? ' text-danger fw-medium' : '' ?>"><?= $m['storage_used_mb'] !== null ? e($sz((int) $m['storage_used_mb'])) : '—' ?></td>
                             <td><?= status_badge($m['status']) ?><?php if ($m['status_reason']): ?><div class="small text-muted"><?= e($m['status_reason']) ?></div><?php endif; ?></td>
                             <td class="text-end text-nowrap">
                                 <?php if ($canEdit && ($m['status'] !== 'suspended' || $isAdmin)): ?>
@@ -85,7 +118,7 @@ $aliasAddresses = array_column($aliases, 'address');
                                             <?php if ($m['status'] !== 'suspended'): ?>
                                                 <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#pwModal" data-action="<?= $act ?>/password" data-text-address="<?= e($m['address']) ?>"><?= $m['status'] === 'disabled' ? 'Set password & enable' : 'Change password' ?></button></li>
                                             <?php endif; ?>
-                                            <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editMailbox" data-action="<?= $act ?>" data-text-address="<?= e($m['address']) ?>" data-set-display-name="<?= e($m['display_name']) ?>" data-set-quota-mb="<?= e($m['quota_mb']) ?>">Edit name & quota</button></li>
+                                            <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editMailbox" data-action="<?= $act ?>" data-text-address="<?= e($m['address']) ?>" data-set-display-name="<?= e($m['display_name']) ?>" data-set-quota-mb="<?= e($m['quota_mb']) ?>"><?= $canSetSizes ? 'Edit name & size' : 'Edit name' ?></button></li>
                                             <?php if ($m['status'] === 'active'): ?>
                                                 <li><button class="dropdown-item text-warning" data-bs-toggle="modal" data-bs-target="#disableModal" data-action="<?= $act ?>/disable" data-text-address="<?= e($m['address']) ?>">Disable</button></li>
                                             <?php endif; ?>
@@ -176,6 +209,27 @@ $aliasAddresses = array_column($aliases, 'address');
                 </div>
             </form>
         <?php endif; ?>
+        <?php if ($canSetSizes):
+            $big = static fn (?int $mb): array => $mb === null ? ['', 'GB'] : ($mb % 1024 === 0 ? [(string) intdiv($mb, 1024), 'GB'] : [(string) $mb, 'MB']);
+            [$tv, $tu] = $big($d['storage_limit_mb'] ?? null);
+            [$pv, $pu] = $big($d['default_quota_mb'] ?? null); ?>
+            <form method="post" action="<?= e(url($base . '/storage')) ?>" class="card mb-3" id="storage">
+                <?= csrf_field() ?>
+                <div class="card-header">Email storage <span class="small text-muted fw-normal">(Super Admin)</span></div>
+                <div class="card-body small">
+                    <label class="form-label" for="storage_total">Total storage for <?= e($d['name']) ?></label>
+                    <div class="input-group mb-3"><input class="form-control" id="storage_total" name="storage_total" inputmode="decimal" value="<?= e($tv) ?>" placeholder="No total limit">
+                        <select class="form-select flex-grow-0 w-auto" name="storage_total_unit" aria-label="Unit"><?php foreach (['GB', 'MB'] as $u): ?><option<?= $tu === $u ? ' selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select></div>
+                    <label class="form-label" for="storage_per">Size of each email account</label>
+                    <div class="input-group mb-2"><input class="form-control" id="storage_per" name="storage_per" inputmode="decimal" value="<?= e($pv) ?>" placeholder="<?= e(($p = App\Services\EmailService::defaultQuota(['default_quota_mb' => null] + $d)) === null ? 'Plan default (no limit)' : 'Plan default: ' . $sz($p)) ?>">
+                        <select class="form-select flex-grow-0 w-auto" name="storage_per_unit" aria-label="Unit"><?php foreach (['GB', 'MB'] as $u): ?><option<?= $pu === $u ? ' selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select></div>
+                    <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="apply_all" value="1" id="apply_all"><label class="form-check-label" for="apply_all">Apply this size to all <?= count($mailboxes) ?> existing email account<?= count($mailboxes) === 1 ? '' : 's' ?> now</label></div>
+                    <?php if ($req): ?><div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="close_requests" value="1" id="close_requests" checked><label class="form-check-label" for="close_requests">Mark the customer's upgrade request as done</label></div><?php endif; ?>
+                    <div class="form-text">Example: 10 GB total and 2 GB each = up to 5 email accounts of 2 GB. Customers and staff cannot change these sizes; customers see an "Upgrade email plan" button instead.</div>
+                </div>
+                <div class="card-footer bg-white"><button class="btn btn-sm btn-primary">Save storage</button></div>
+            </form>
+        <?php endif; ?>
         <?php if ($isAdmin && can('email.manage') && can('providers.view')): ?>
             <form method="post" action="<?= e(url($base . '/servers')) ?>" class="card mb-3" autocomplete="off">
                 <?= csrf_field() ?>
@@ -233,7 +287,12 @@ $aliasAddresses = array_column($aliases, 'address');
         <label class="form-label" for="nm_name">Display name (optional)</label><input class="form-control mb-3" id="nm_name" name="display_name" maxlength="150">
         <label class="form-label" for="nm_pw">Password</label><input type="password" class="form-control mb-1" id="nm_pw" name="password" autocomplete="new-password" required>
         <div class="form-text mb-3">10+ characters with letters and a number. It is not stored by the panel — keep it safe.</div>
-        <label class="form-label" for="nm_quota">Quota (MB, optional)</label><input class="form-control" id="nm_quota" name="quota_mb" inputmode="numeric" placeholder="Plan default">
+        <?php if ($canSetSizes): ?>
+            <label class="form-label" for="nm_quota">Mailbox size (optional)</label>
+            <div class="input-group"><input class="form-control" id="nm_quota" name="quota_mb" inputmode="decimal" placeholder="<?= e($st['per'] === null ? 'No limit' : 'Default: ' . $sz($st['per'])) ?>"><select class="form-select flex-grow-0 w-auto" name="quota_unit" aria-label="Unit"><option>MB</option><option>GB</option></select></div>
+        <?php elseif ($st['per'] !== null): ?>
+            <div class="small text-muted"><i class="bi bi-hdd me-1"></i>This email account gets <strong><?= e($sz($st['per'])) ?></strong> of storage.</div>
+        <?php endif; ?>
     </div>
     <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Create mailbox</button></div>
 </form></div></div>
@@ -243,7 +302,11 @@ $aliasAddresses = array_column($aliases, 'address');
     <div class="modal-header"><h5 class="modal-title">Edit <span data-text="address"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
         <label class="form-label" for="em_name">Display name</label><input class="form-control mb-3" id="em_name" name="display_name" maxlength="150">
-        <label class="form-label" for="em_quota">Quota (MB)</label><input class="form-control" id="em_quota" name="quota_mb" inputmode="numeric" placeholder="Plan default">
+        <?php if ($canSetSizes): ?>
+            <label class="form-label" for="em_quota">Mailbox size</label>
+            <div class="input-group"><input class="form-control" id="em_quota" name="quota_mb" inputmode="decimal" placeholder="<?= e($st['per'] === null ? 'No limit' : 'Default: ' . $sz($st['per'])) ?>"><select class="form-select flex-grow-0 w-auto" name="quota_unit" aria-label="Unit"><option>MB</option><option>GB</option></select></div>
+            <div class="form-text">In MB unless you choose GB. Leave empty for the domain's default size.</div>
+        <?php endif; ?>
     </div>
     <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Save</button></div>
 </form></div></div>
@@ -316,5 +379,18 @@ $aliasAddresses = array_column($aliases, 'address');
     <div class="modal-header"><h5 class="modal-title">Suspend email</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body"><p class="small">The customer can no longer create or change mailboxes and aliases on this domain.</p><label class="form-label" for="sd_r">Reason</label><input class="form-control" id="sd_r" name="reason" maxlength="255" required></div>
     <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning">Suspend</button></div>
+</form></div></div>
+<?php endif; ?>
+
+<?php if (!$isAdmin && !$req): ?>
+<div class="modal fade" id="upgradeEmail" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><form class="modal-content" method="post" action="<?= e(url($base . '/upgrade')) ?>">
+    <?= csrf_field() ?>
+    <div class="modal-header"><h5 class="modal-title">Upgrade email plan</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">
+        <p class="small">We will contact you with the options and price for more email storage on <strong><?= e($d['name']) ?></strong>.</p>
+        <label class="form-label" for="up_msg">What do you need? (optional)</label>
+        <textarea class="form-control" id="up_msg" name="message" rows="3" maxlength="1000" placeholder="e.g. 5 GB for each account, or 3 more email accounts"></textarea>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Send request</button></div>
 </form></div></div>
 <?php endif; ?>

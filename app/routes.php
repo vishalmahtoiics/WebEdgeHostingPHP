@@ -116,11 +116,14 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
     $r->get('/ssl', [Admin\SslController::class, 'index'], ['perm' => 'domains.view']);
     $r->post('/ssl/check', [Admin\SslController::class, 'check'], ['perm' => 'domains.view']);
     $r->post('/ssl/check-all', [Admin\SslController::class, 'checkAll'], ['perm' => 'domains.view']);
+    $r->post('/ssl/dates', [Admin\SslController::class, 'dates'], ['perm' => 'domains.view']);
+    $r->post('/ssl/auto', [Admin\SslController::class, 'auto'], ['perm' => 'domains.view']);
 
     // Email
     $r->group('/email', ['perm' => 'email.view'], static function ($r): void {
         $r->get('', [Admin\EmailController::class, 'index']);
         $r->get('/routing', [Admin\EmailController::class, 'routing']);
+        $r->get('/requests', [Admin\EmailController::class, 'requests']);
         $r->get('/{id}', [Admin\EmailController::class, 'show']);
     });
     $r->group('/email', ['perm' => 'email.manage'], static function ($r): void {
@@ -131,6 +134,9 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
         $r->post('/{id}/import', [Admin\EmailController::class, 'import']);
         $r->post('/{id}/servers', [Admin\EmailController::class, 'servers']);
         $r->post('/{id}/limit', [Admin\EmailController::class, 'limit']);
+        $r->post('/{id}/storage', [Admin\EmailController::class, 'storage']);
+        $r->post('/bulk-storage', [Admin\EmailController::class, 'bulkStorage']);
+        $r->post('/requests/{rid}', [Admin\EmailController::class, 'closeRequest']);
         $r->post('/{id}/delete', [Admin\EmailController::class, 'destroy']);
         $r->post('/{id}/mailboxes', [Admin\EmailController::class, 'storeMailbox']);
         $r->post('/{id}/mailboxes/{mid}', [Admin\EmailController::class, 'updateMailbox']);
@@ -325,6 +331,7 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
     $r->group('/email', ['perm' => 'email'], static function ($r): void {
         $r->get('', [Customer\EmailController::class, 'index']);
         $r->get('/{id}', [Customer\EmailController::class, 'show']);
+        $r->post('/{id}/upgrade', [Customer\EmailController::class, 'upgrade']);
         $r->post('/{id}/mailboxes', [Customer\EmailController::class, 'storeMailbox']);
         $r->post('/{id}/mailboxes/{mid}', [Customer\EmailController::class, 'updateMailbox']);
         $r->post('/{id}/mailboxes/{mid}/password', [Customer\EmailController::class, 'mailboxPassword']);

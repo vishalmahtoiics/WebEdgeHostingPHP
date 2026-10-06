@@ -22,6 +22,12 @@ final class SslService
     public static function check(string $hostname, int $port = 443): array
     {
         $hostname = strtolower(trim($hostname));
+        $manual = DB::one('SELECT * FROM ssl_checks WHERE hostname = ? AND manual = 1', [$hostname]);
+        if ($manual) {
+            // Dates set by a Super Admin stay until they are cleared; only the status follows the clock.
+            DB::run('UPDATE ssl_checks SET status = ?, checked_at = NOW() WHERE id = ?', [self::statusFor($manual['valid_from'], $manual['valid_to']), $manual['id']]);
+            return DB::one('SELECT * FROM ssl_checks WHERE id = ?', [$manual['id']]);
+        }
         $result = ['hostname' => $hostname, 'status' => 'not_available', 'issuer' => null, 'subject' => null, 'valid_from' => null, 'valid_to' => null, 'error' => null];
 
         $ctx = stream_context_create(['ssl' => [
@@ -83,6 +89,54 @@ final class SslService
             $result['status'] = 'active';
         }
         return self::save($result);
+    }
+
+    /** Status for a certificate valid between two dates (used for dates set by hand). */
+    public static function statusFor(?string $validFrom, ?string $validTo): string
+    {
+        $now = time();
+        $to = $validTo ? strtotime($validTo) : false;
+        if ($to === false || ($validFrom && strtotime($validFrom) > $now)) {
+            return 'not_available';
+        }
+        if ($to < $now) {
+            return 'expired';
+        }
+        return $to - $now <= max(1, (int) Settings::get('provider.ssl_expiring_days')) * 86400 ? 'expiring' : 'active';
+    }
+
+    /**
+     * Super Admin: set a hostname's certificate dates by hand. They are shown to
+     * the customer and used for expiry alerts until clearManual() is called.
+     */
+    public static function setManual(string $hostname, string $validFrom, string $validTo, ?string $note, ?int $userId): array
+    {
+        $from = strtotime($validFrom . ' 00:00:00');
+        $to = strtotime($validTo . ' 23:59:59');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $validFrom) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $validTo) || $from === false || $to === false) {
+            throw new \InvalidArgumentException('Enter valid "from" and "until" dates.');
+        }
+        if ($to <= $from) {
+            throw new \InvalidArgumentException('"Valid until" must be after "valid from".');
+        }
+        $from = date('Y-m-d H:i:s', $from);
+        $to = date('Y-m-d H:i:s', $to);
+        $note = $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 255) : null;
+        DB::run(
+            "INSERT INTO ssl_checks (hostname, status, issuer, valid_from, valid_to, error, manual, manual_note, manual_by, manual_at, checked_at)
+             VALUES (?, ?, NULL, ?, ?, NULL, 1, ?, ?, NOW(), NOW())
+             ON DUPLICATE KEY UPDATE status = VALUES(status), valid_from = VALUES(valid_from), valid_to = VALUES(valid_to), error = NULL,
+                manual = 1, manual_note = VALUES(manual_note), manual_by = VALUES(manual_by), manual_at = NOW(), checked_at = NOW()",
+            [strtolower($hostname), self::statusFor($from, $to), $from, $to, $note, $userId]
+        );
+        return DB::one('SELECT * FROM ssl_checks WHERE hostname = ?', [strtolower($hostname)]);
+    }
+
+    /** Go back to reading the dates from the live certificate. */
+    public static function clearManual(string $hostname): array
+    {
+        DB::run('UPDATE ssl_checks SET manual = 0, manual_note = NULL, manual_by = NULL, manual_at = NULL WHERE hostname = ?', [strtolower($hostname)]);
+        return self::check($hostname);
     }
 
     private static function save(array $r): array

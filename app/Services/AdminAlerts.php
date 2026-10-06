@@ -15,6 +15,9 @@ final class AdminAlerts
     private static array $lines = [];
     private static ?array $who = null;
     private static bool $registered = false;
+    /** @var array<int, array{0: string, 1: string}> subject, html */
+    private static array $messages = [];
+    private static bool $skipActivity = false;
 
     public static function recipients(): array
     {
@@ -36,15 +39,43 @@ final class AdminAlerts
         }
     }
 
+    /**
+     * Email the admin team about something that needs action (always sent,
+     * whatever the activity settings). It replaces the activity summary for
+     * this request so the team does not get two emails about one click.
+     */
+    public static function important(string $subject, string $html): void
+    {
+        if (!self::recipients()) {
+            return;
+        }
+        self::$messages[] = [$subject, $html];
+        self::$skipActivity = true;
+        if (!self::$registered) {
+            self::$registered = true;
+            register_shutdown_function([self::class, 'flush']);
+        }
+    }
+
     public static function flush(): void
     {
-        if (!self::$lines || !self::$who) {
+        if (!self::$messages && (!self::$lines || !self::$who)) {
             return;
         }
         if (function_exists('fastcgi_finish_request')) {
             @fastcgi_finish_request();
         } elseif (function_exists('litespeed_finish_request')) {
             @litespeed_finish_request();
+        }
+        foreach (self::$messages as [$subject, $html]) {
+            foreach (self::recipients() as $to) {
+                Mailer::send($to, $subject, $html);
+            }
+        }
+        self::$messages = [];
+        if (!self::$lines || !self::$who || self::$skipActivity) {
+            self::$lines = [];
+            return;
         }
         $u = self::$who;
         $customer = trim(($u['customer_name'] ?? '') . (!empty($u['customer_code']) ? ' (' . $u['customer_code'] . ')' : '')) ?: 'Customer';

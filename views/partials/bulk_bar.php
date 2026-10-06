@@ -2,7 +2,8 @@
 /**
  * Sticky action bar for checkbox selections in admin lists. Row checkboxes use
  * form="bulkForm" (tables contain their own forms, so they cannot be nested).
- * $what: label for the items ("websites"), $back: list URL to return to.
+ * $what: label for the items ("websites"), $back: list URL to return to,
+ * $extra: more controls for this list (buttons use formaction to post elsewhere).
  */
 $customers = customer_options();
 $back = $back ?? (string) ($_SERVER['REQUEST_URI'] ?? '/admin');
@@ -25,5 +26,6 @@ $back = $back ?? (string) ($_SERVER['REQUEST_URI'] ?? '/admin');
             <button class="btn btn-primary btn-sm" name="do" value="assign"><i class="bi bi-person-check me-1"></i>Assign</button>
             <button class="btn btn-light btn-sm" name="do" value="unassign" data-confirm="Unassign the selected items from their customers?"><i class="bi bi-person-dash me-1"></i>Unassign</button>
         </div>
+        <?= $extra ?? '' ?>
     </div>
 </form>

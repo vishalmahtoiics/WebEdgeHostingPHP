@@ -210,7 +210,7 @@ final class EmailService
                     }
                     DB::update('mailboxes', $data, 'id = ?', [$existing['id']]);
                 } else {
-                    DB::insert('mailboxes', [...$data, 'email_domain_id' => $id, 'customer_id' => $d['customer_id'], 'local_part' => $local,
+                    DB::insert('mailboxes', [...$data, 'email_domain_id' => $id, 'customer_id' => $d['customer_id'], 'local_part' => $local, 'quota_mb' => $d['default_quota_mb'] ?? null,
                         'address' => $m['address'], 'status' => $m['status'] === 'suspended' ? 'suspended' : 'active', 'created_at' => now()]);
                     $counts['mailboxes']++;
                 }
@@ -251,7 +251,7 @@ final class EmailService
         return ['limit' => $s['limit'], 'used' => $s['used'], 'source' => !empty($s['custom']) ? 'customer' : 'plan'];
     }
 
-    public static function createMailbox(int $domainId, string $local, string $password, ?int $quotaMb, ?string $displayName, bool $enforcePlan): int
+    public static function createMailbox(int $domainId, string $local, string $password, ?int $quotaMb, ?string $displayName, bool $enforcePlan, bool $canSetSize = false): int
     {
         $d = self::domain($domainId);
         self::assertManageable($d);
@@ -266,7 +266,8 @@ final class EmailService
         if ($problem = self::passwordProblem($password)) {
             throw new InvalidArgumentException($problem);
         }
-        $quotaMb = self::checkQuota($d, $quotaMb, $enforcePlan);
+        // Only a Super Admin chooses sizes; everyone else gets the size set for this domain.
+        $quotaMb = self::quotaFor($d, $canSetSize ? $quotaMb : null, null, $enforcePlan);
         if ($enforcePlan && ($d['max_mailboxes'] ?? null) !== null) {
             // This domain has its own limit (set by a Super Admin): it replaces the plan limit here.
             $lim = (int) $d['max_mailboxes'];
@@ -305,29 +306,114 @@ final class EmailService
         return $id;
     }
 
-    /** Quota must fit the customer's plan (mailbox_quota_mb). Null = plan default. */
-    private static function checkQuota(array $domain, ?int $quotaMb, bool $enforcePlan): ?int
+    /** Size given to new email accounts on a domain: its own setting, else the plan's mailbox quota. */
+    public static function defaultQuota(array $domain): ?int
     {
-        $planQuota = null;
+        if (($domain['default_quota_mb'] ?? null) !== null) {
+            return (int) $domain['default_quota_mb'];
+        }
         if ($domain['customer_id']) {
             $sub = SubscriptionService::current((int) $domain['customer_id']);
-            $planQuota = $sub && $sub['mailbox_quota_mb'] !== null ? (int) $sub['mailbox_quota_mb'] : null;
+            return $sub && $sub['mailbox_quota_mb'] !== null ? (int) $sub['mailbox_quota_mb'] : null;
         }
-        if ($quotaMb !== null && ($quotaMb < 50 || $quotaMb > 1048576)) {
-            throw new InvalidArgumentException('Quota must be between 50 MB and 1 TB.');
-        }
-        if ($enforcePlan && $planQuota !== null && $quotaMb !== null && $quotaMb > $planQuota) {
-            throw new InvalidArgumentException("Your plan allows up to $planQuota MB per mailbox.");
-        }
-        return $quotaMb ?? $planQuota;
+        return null;
     }
 
-    public static function updateMailbox(int $id, ?string $displayName, ?int $quotaMb, bool $enforcePlan): void
+    /**
+     * Email storage on a domain for display.
+     * @return array{total: ?int, per: ?int, allocated: int, used: int, mailboxes: int}
+     */
+    public static function storage(array $domain): array
+    {
+        $r = DB::one('SELECT COUNT(*) AS n, COALESCE(SUM(quota_mb), 0) AS q, COALESCE(SUM(storage_used_mb), 0) AS u FROM mailboxes WHERE email_domain_id = ?', [$domain['id']]);
+        return [
+            'total' => ($domain['storage_limit_mb'] ?? null) !== null ? (int) $domain['storage_limit_mb'] : null,
+            'per' => self::defaultQuota($domain),
+            'allocated' => (int) $r['q'],
+            'used' => (int) $r['u'],
+            'mailboxes' => (int) $r['n'],
+        ];
+    }
+
+    /** "500 MB", "2 GB", "1.5 GB". */
+    public static function sizeLabel(?int $mb): string
+    {
+        if ($mb === null) {
+            return 'Unlimited';
+        }
+        return $mb >= 1024 ? rtrim(rtrim(number_format($mb / 1024, 2, '.', ''), '0'), '.') . ' GB' : $mb . ' MB';
+    }
+
+    /**
+     * The size a mailbox gets: the requested size (Super Admin) or the domain's
+     * default, and it must fit in what is left of the domain's total storage.
+     */
+    private static function quotaFor(array $domain, ?int $requested, ?int $exceptMailboxId, bool $forCustomer): ?int
+    {
+        if ($requested !== null && ($requested < 50 || $requested > 1048576)) {
+            throw new InvalidArgumentException('Mailbox size must be between 50 MB and 1 TB.');
+        }
+        $quota = $requested ?? self::defaultQuota($domain);
+        if (($domain['storage_limit_mb'] ?? null) === null) {
+            return $quota;
+        }
+        $total = (int) $domain['storage_limit_mb'];
+        $allocated = (int) DB::value('SELECT COALESCE(SUM(quota_mb), 0) FROM mailboxes WHERE email_domain_id = ?' . ($exceptMailboxId ? ' AND id <> ' . (int) $exceptMailboxId : ''), [$domain['id']]);
+        $left = max(0, $total - $allocated);
+        $quota ??= $left;
+        if ($quota > $left || $quota < 1) {
+            throw new RuntimeException($forCustomer
+                ? 'Your email storage on ' . $domain['name'] . ' is full: ' . self::sizeLabel($allocated) . ' of ' . self::sizeLabel($total) . ' is already given to your email accounts. Click "Upgrade email plan" to get more space.'
+                : 'Only ' . self::sizeLabel($left) . ' of the ' . self::sizeLabel($total) . ' total email storage is left on ' . $domain['name'] . '. Use a smaller size or raise the total storage.');
+        }
+        return $quota;
+    }
+
+    /**
+     * Super Admin: total email storage for a domain and the size of each email
+     * account, optionally applied to every existing account at once.
+     */
+    public static function setStorage(int $domainId, ?int $totalMb, ?int $perMb, bool $applyToAll): array
+    {
+        $d = self::domain($domainId);
+        foreach ([$totalMb, $perMb] as $v) {
+            if ($v !== null && ($v < 50 || $v > 10485760)) {
+                throw new InvalidArgumentException('Sizes must be between 50 MB and 10 TB.');
+            }
+        }
+        if ($totalMb !== null && $perMb === null) {
+            throw new InvalidArgumentException('Also set the size of each email account, so new accounts know how much of the total they get.');
+        }
+        if ($totalMb !== null && $perMb > $totalMb) {
+            throw new InvalidArgumentException('The size of one email account cannot be more than the total storage.');
+        }
+        $boxes = DB::all('SELECT id, quota_mb FROM mailboxes WHERE email_domain_id = ?', [$domainId]);
+        // Accounts without a size get the new size; with "apply to all" every account does.
+        $after = 0;
+        foreach ($boxes as $m) {
+            $after += ($applyToAll || $m['quota_mb'] === null) ? (int) $perMb : (int) $m['quota_mb'];
+        }
+        if ($totalMb !== null && $after > $totalMb) {
+            throw new RuntimeException(count($boxes) . ' email account' . (count($boxes) === 1 ? '' : 's') . ' would need ' . self::sizeLabel($after)
+                . ', which is more than the total of ' . self::sizeLabel($totalMb) . '. Raise the total' . ($applyToAll ? ' or lower the size per account.' : ', or tick "apply to all existing accounts" with a smaller size.'));
+        }
+        DB::transaction(static function () use ($domainId, $totalMb, $perMb, $applyToAll): void {
+            DB::update('email_domains', ['storage_limit_mb' => $totalMb, 'default_quota_mb' => $perMb, 'updated_at' => now()], 'id = ?', [$domainId]);
+            if ($perMb !== null) {
+                DB::run('UPDATE mailboxes SET quota_mb = ?, updated_at = NOW() WHERE email_domain_id = ?' . ($applyToAll ? '' : ' AND quota_mb IS NULL'), [$perMb, $domainId]);
+            }
+        });
+        Logger::activity('email', 'storage', "Email storage for {$d['name']}: total " . self::sizeLabel($totalMb) . ', per account ' . ($perMb === null ? 'plan default' : self::sizeLabel($perMb)) . ($applyToAll ? ' (applied to all accounts)' : ''), 'email_domain', $domainId, self::customerId($d));
+        return ['mailboxes' => count($boxes), 'allocated' => $after];
+    }
+
+    public static function updateMailbox(int $id, ?string $displayName, ?int $quotaMb, bool $enforcePlan, bool $canSetSize = false): void
     {
         $m = self::mailbox($id);
         $d = self::domain((int) $m['email_domain_id']);
         self::assertManageable($d);
-        $quotaMb = self::checkQuota($d, $quotaMb, $enforcePlan);
+        // Without permission to change sizes the mailbox keeps its size.
+        $quotaMb = $canSetSize ? self::quotaFor($d, $quotaMb, $id, false) : ($m['quota_mb'] === null ? null : (int) $m['quota_mb']);
         DB::update('mailboxes', ['display_name' => $displayName ?: null, 'quota_mb' => $quotaMb, 'updated_at' => now()], 'id = ?', [$id]);
         Logger::activity('email', 'update_mailbox', "Updated mailbox {$m['address']}", 'mailbox', $id, self::customerId($d));
     }
