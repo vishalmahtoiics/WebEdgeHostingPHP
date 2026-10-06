@@ -40,7 +40,7 @@ $manage = can('subscriptions.manage');
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="card mb-3">
-            <div class="card-header">Details</div>
+            <div class="card-header d-flex justify-content-between align-items-center">Details<?php if (\App\Core\Auth::isSuper()): ?><button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editSubModal"><i class="bi bi-pencil me-1"></i>Edit</button><?php endif; ?></div>
             <div class="card-body">
                 <dl class="we-dl mb-0">
                     <dt>Amount</dt><dd><?= e(money($s['price'])) ?> / <?= e(strtolower(BillingCycle::label($s['billing_cycle']))) ?></dd>
@@ -114,6 +114,31 @@ $manage = can('subscriptions.manage');
         </div>
     </div>
 </div>
+
+<?php if (\App\Core\Auth::isSuper()): ?>
+<div class="modal fade" id="editSubModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><form class="modal-content" method="post" action="<?= e(url('/admin/subscriptions/' . $s['id'] . '/edit')) ?>">
+        <?= csrf_field() ?>
+        <div class="modal-header"><h5 class="modal-title">Edit subscription details</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+            <div class="row g-2 mb-3">
+                <div class="col-7"><label class="form-label" for="es_price">Amount (₹, before GST)</label><input class="form-control" id="es_price" name="price" inputmode="decimal" value="<?= e(App\Support\Money::toDecimal((int) $s['price'])) ?>" required></div>
+                <div class="col-5"><label class="form-label" for="es_cycle">Billing cycle</label><select class="form-select" id="es_cycle" name="billing_cycle">
+                    <?php foreach (BillingCycle::LABELS as $k => $l): ?><option value="<?= e($k) ?>"<?= selected($s['billing_cycle'], $k) ?>><?= e($l) ?></option><?php endforeach; ?>
+                </select></div>
+            </div>
+            <label class="form-label" for="es_start">Start date</label><input type="date" class="form-control mb-3" id="es_start" name="start_date" value="<?= e($s['start_date']) ?>" required>
+            <div class="row g-2 mb-3">
+                <div class="col-6"><label class="form-label" for="es_ps">Current period from</label><input type="date" class="form-control" id="es_ps" name="current_period_start" value="<?= e($s['current_period_start']) ?>" required></div>
+                <div class="col-6"><label class="form-label" for="es_pe">to</label><input type="date" class="form-control" id="es_pe" name="current_period_end" value="<?= e($s['current_period_end']) ?>" required></div>
+            </div>
+            <label class="form-label" for="es_rn">Next renewal</label><input type="date" class="form-control" id="es_rn" name="renewal_date" value="<?= e($s['renewal_date']) ?>">
+            <div class="form-text">Leave empty for the day after the period ends. The new amount is used for the next renewal invoice; invoices already issued do not change. The customer's owner sees the new amount and dates.</div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Save changes</button></div>
+    </form></div>
+</div>
+<?php endif; ?>
 
 <?php if ($manage): ?>
 <div class="modal fade" id="changePlanModal" tabindex="-1" aria-hidden="true">

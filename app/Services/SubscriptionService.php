@@ -214,6 +214,64 @@ final class SubscriptionService
         return $sub;
     }
 
+    /**
+     * Super Admin: correct a subscription's amount, billing cycle and dates by
+     * hand. The amount is in paise. Returns the list of changed fields.
+     */
+    public static function editDetails(int $subId, int $price, string $cycle, string $start, string $periodStart, string $periodEnd, string $renewal): array
+    {
+        if (!isset(BillingCycle::MONTHS[$cycle])) {
+            throw new InvalidArgumentException('Choose a billing cycle.');
+        }
+        if ($price < 0 || $price > 100000000000) {
+            throw new InvalidArgumentException('Enter a valid amount.');
+        }
+        foreach ([$start, $periodStart, $periodEnd] as $d) {
+            if (!valid_date($d)) {
+                throw new InvalidArgumentException('Enter valid dates.');
+            }
+        }
+        if ($renewal === '') {
+            $renewal = date('Y-m-d', strtotime($periodEnd . ' +1 day'));
+        } elseif (!valid_date($renewal)) {
+            throw new InvalidArgumentException('Enter a valid next renewal date.');
+        }
+        if ($periodStart < $start) {
+            throw new InvalidArgumentException('The current period cannot start before the subscription start date.');
+        }
+        if ($periodEnd < $periodStart) {
+            throw new InvalidArgumentException('The current period must end on or after its start.');
+        }
+        if ($renewal <= $periodStart) {
+            throw new InvalidArgumentException('The next renewal must be after the current period starts.');
+        }
+        return DB::transaction(static function () use ($subId, $price, $cycle, $start, $periodStart, $periodEnd, $renewal): array {
+            $sub = self::lock($subId);
+            $new = ['price' => $price, 'billing_cycle' => $cycle, 'start_date' => $start, 'current_period_start' => $periodStart, 'current_period_end' => $periodEnd, 'renewal_date' => $renewal];
+            $labels = ['price' => 'amount', 'billing_cycle' => 'billing cycle', 'start_date' => 'start date', 'current_period_start' => 'current period', 'current_period_end' => 'current period', 'renewal_date' => 'next renewal'];
+            $changed = [];
+            $detail = [];
+            foreach ($new as $k => $v) {
+                if ((string) $sub[$k] !== (string) $v) {
+                    $changed[$labels[$k]] = true;
+                    $detail[] = $k === 'price' ? 'amount ' . money((int) $sub[$k]) . ' → ' . money($v) : "$k {$sub[$k]} → $v";
+                }
+            }
+            if (!$changed) {
+                return [];
+            }
+            $data = $new + ['updated_at' => now()];
+            if ($sub['current_period_end'] !== $periodEnd || $sub['renewal_date'] !== $renewal) {
+                $data['expiry_notified_at'] = null; // send the expiry reminder again for the new dates
+            }
+            DB::update('subscriptions', $data, 'id = ?', [$subId]);
+            // The customer can see this history, so it names what changed without amounts.
+            self::event($subId, 'edited', 'Subscription details updated: ' . implode(', ', array_keys($changed)));
+            Logger::activity('subscriptions', 'edit', "Subscription #$subId edited by Super Admin: " . implode('; ', $detail), 'subscription', $subId, (int) $sub['customer_id']);
+            return array_keys($changed);
+        });
+    }
+
     public static function event(int $subId, string $event, string $description, ?int $fromPlan = null, ?int $toPlan = null): void
     {
         DB::insert('subscription_events', [

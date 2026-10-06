@@ -198,6 +198,7 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
         $r->post('/{id}/change-plan', [Admin\SubscriptionsController::class, 'changePlan']);
         $r->post('/{id}/status', [Admin\SubscriptionsController::class, 'status']);
         $r->post('/{id}/auto-renew', [Admin\SubscriptionsController::class, 'autoRenew']);
+        $r->post('/{id}/edit', [Admin\SubscriptionsController::class, 'edit']);
     });
 
     $r->get('/renewals', [Admin\RenewalsController::class, 'index'], ['perm' => 'subscriptions.view']);

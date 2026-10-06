@@ -144,6 +144,26 @@ final class SubscriptionsController extends Controller
         $this->success("/admin/subscriptions/$id", 'Subscription updated.');
     }
 
+    /** Super Admin: change the amount, billing cycle and dates by hand. */
+    public function edit(int $id): string
+    {
+        if (!\App\Core\Auth::isSuper()) {
+            abort(403, 'Only a Super Admin can edit subscription details.');
+        }
+        $raw = input_str('price');
+        if (!\App\Support\Money::isValid($raw)) {
+            $this->failed("/admin/subscriptions/$id", ['Enter the amount in rupees, for example 20000 or 1999.50.']);
+        }
+        try {
+            $changed = SubscriptionService::editDetails($id, \App\Support\Money::parse($raw), input_str('billing_cycle'), input_str('start_date'),
+                input_str('current_period_start'), input_str('current_period_end'), input_str('renewal_date'));
+        } catch (\InvalidArgumentException | \RuntimeException $e) {
+            $this->failed("/admin/subscriptions/$id", [$e->getMessage()]);
+        }
+        $changed ? $this->success("/admin/subscriptions/$id", 'Subscription updated: ' . implode(', ', $changed) . '.')
+            : $this->success("/admin/subscriptions/$id", 'Nothing changed.');
+    }
+
     public function autoRenew(int $id): string
     {
         SubscriptionService::setAutoRenew($id, (bool) input('auto_renew', false));
