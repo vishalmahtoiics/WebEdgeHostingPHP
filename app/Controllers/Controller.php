@@ -9,6 +9,9 @@ abstract class Controller
 {
     protected function view(string $template, array $data = [], ?string $layout = 'layouts/app'): string
     {
+        if (str_starts_with($template, 'admin/') && \App\Core\Auth::isAdmin()) {
+            \App\Services\ProviderSyncService::syncIfDue();
+        }
         return view($template, $data, $layout);
     }
 

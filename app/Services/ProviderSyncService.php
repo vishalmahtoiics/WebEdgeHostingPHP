@@ -55,6 +55,7 @@ final class ProviderSyncService
             throw $e;
         }
 
+        $resources = self::withSiteDomains($resources);
         $counts = ['new' => 0, 'updated' => 0, 'missing' => 0];
         DB::transaction(static function () use ($providerId, $resources, $startedAt, &$counts): void {
             foreach ($resources as $r) {
@@ -106,6 +107,103 @@ final class ProviderSyncService
         ], 'id = ?', [$providerId]);
         Logger::activity('providers', 'sync', "Synced provider account \"{$p['label']}\": $summary", 'provider', $providerId);
         return $counts + $imported + ['total' => count($resources)];
+    }
+
+    /** Temporary/preview addresses given by hosting providers: never added as domains. */
+    private const PROVIDER_HOST_SUFFIXES = ['.hostingersite.com', '.hstgr.io', '.hstgr.cloud', '.preview-domain.com', '.hostinger.com', '.hostinger.in', '.000webhostapp.com', '.builder-preview.com'];
+
+    /**
+     * The provider's domain list only has domains registered with it. Websites
+     * and email on a domain registered elsewhere (e.g. GoDaddy) would never show
+     * under Domains, so add those domains too, marked as "DNS hosted elsewhere".
+     * Because they are part of every sync they are not flagged as missing, and a
+     * domain removed from the panel on purpose is not added back.
+     */
+    private static function withSiteDomains(array $resources): array
+    {
+        $known = [];
+        foreach ($resources as $r) {
+            if ($r['type'] === 'domain') {
+                $known[strtolower($r['external_id'])] = true;
+            }
+        }
+        foreach ($resources as $r) {
+            if ($r['type'] === 'website') {
+                $from = 'website';
+                $name = strtolower((string) $r['external_id']);
+                $parent = strtolower((string) ($r['meta']['parent_domain'] ?? ''));
+                if ($parent !== '' && str_ends_with($name, '.' . $parent)) {
+                    $name = $parent; // a subdomain website belongs to its main domain
+                }
+            } elseif ($r['type'] === 'mail_order') {
+                $from = 'email';
+                $name = strtolower((string) ($r['meta']['domain'] ?? ''));
+            } else {
+                continue;
+            }
+            $name = (string) preg_replace('/^www\./', '', trim($name, '. '));
+            if ($name === '' || isset($known[$name]) || !DomainService::isValid($name)) {
+                continue;
+            }
+            foreach (self::PROVIDER_HOST_SUFFIXES as $suffix) {
+                if (str_ends_with($name, $suffix)) {
+                    continue 2;
+                }
+            }
+            $known[$name] = true;
+            $resources[] = ['type' => 'domain', 'external_id' => $name, 'name' => $name, 'status' => 'active', 'parent' => null,
+                'meta' => ['found_via' => $from, 'external_dns' => true]];
+        }
+        return $resources;
+    }
+
+    /**
+     * Sync in the background when an admin opens the panel and the last sync is
+     * older than the sync interval, so new domains and websites appear even if
+     * the server's cron job is not set up. Runs after the page has been sent.
+     */
+    public static function syncIfDue(): void
+    {
+        if (!Settings::bool('provider.auto_sync') || !Settings::bool('provider.sync_on_visit')) {
+            return;
+        }
+        $hours = max(1, Settings::int('provider.sync_interval_hours'));
+        try {
+            $due = DB::column(
+                "SELECT id FROM providers WHERE is_enabled = 1 AND driver <> 'manual' AND (last_sync_at IS NULL OR last_sync_at < NOW() - INTERVAL ? HOUR)
+                 AND (last_checked_at IS NULL OR last_checked_at < NOW() - INTERVAL 10 MINUTE)",
+                [$hours]
+            );
+        } catch (\PDOException) {
+            return;
+        }
+        if (!$due) {
+            return;
+        }
+        register_shutdown_function(static function () use ($due): void {
+            if (function_exists('fastcgi_finish_request')) {
+                @fastcgi_finish_request();
+            } elseif (function_exists('litespeed_finish_request')) {
+                @litespeed_finish_request();
+            }
+            $lock = @fopen(BASE_PATH . '/storage/cache/provider-sync.lock', 'c');
+            if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
+                return; // another request is already syncing
+            }
+            ignore_user_abort(true);
+            @set_time_limit(300);
+            foreach ($due as $pid) {
+                try {
+                    self::sync((int) $pid);
+                } catch (\Throwable $e) {
+                    // sync() records the error on the provider account; try again after 10 minutes.
+                    DB::run('UPDATE providers SET last_checked_at = NOW() WHERE id = ?', [(int) $pid]);
+                    error_log("Background provider sync #$pid failed: " . $e->getMessage());
+                }
+            }
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        });
     }
 
     /** Resource types added to the panel automatically, in dependency order. */
@@ -241,7 +339,8 @@ final class ProviderSyncService
                         'provider_id' => $providerId,
                         'provider_resource_id' => (int) $r['id'],
                         'source' => 'discovered',
-                        'dns_hosted' => 1,
+                        // Domains registered elsewhere (found through a website or email) keep their DNS there.
+                        'dns_hosted' => empty($meta['external_dns']) ? 1 : 0,
                         'registrar_status' => $r['status'],
                         'expires_at' => !empty($meta['expires_at']) ? date('Y-m-d', strtotime($meta['expires_at'])) : null,
                     ]);
