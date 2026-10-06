@@ -83,7 +83,9 @@ final class Logger
     public static function customerVisibleSql(string $alias = 'activity_logs'): string
     {
         $list = implode(', ', array_map(static fn ($a) => "'" . $a . "'", self::CUSTOMER_VISIBLE_STAFF_ACTIONS));
-        return "($alias.user_type = 'customer' OR CONCAT($alias.module, '.', $alias.action) IN ($list))";
+        // Billing activity mentions amounts, so only users who may see prices get it.
+        $billing = Auth::canSeePrices() ? '' : " AND $alias.module NOT IN ('billing', 'invoices', 'credit_notes', 'payments')";
+        return "(($alias.user_type = 'customer' OR CONCAT($alias.module, '.', $alias.action) IN ($list))$billing)";
     }
 
     public static function scrub(string $text): string

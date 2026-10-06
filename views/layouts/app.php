@@ -8,7 +8,7 @@ $isAdmin = Auth::isAdmin();
 $favicon = (string) setting('brand.favicon');
 $unread = 0;
 if ($user && !$isAdmin) {
-    $unread = (int) DB::value('SELECT COUNT(*) FROM notifications WHERE customer_id = ? AND is_read = 0', [$user['customer_id']]);
+    $unread = (int) DB::value('SELECT COUNT(*) FROM notifications WHERE customer_id = ? AND is_read = 0 AND ' . App\Support\NotificationTypes::visibleSql(), [$user['customer_id']]);
 }
 $primary = (string) setting('brand.primary_color');
 if (!preg_match('/^#[0-9a-fA-F]{6}$/', $primary)) {

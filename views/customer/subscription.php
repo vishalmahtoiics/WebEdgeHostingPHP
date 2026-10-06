@@ -17,7 +17,11 @@ use App\Support\BillingCycle;
                     <div><?= status_badge($sub['status']) ?></div>
                 </div>
                 <dl class="row we-dl mb-0">
-                    <dt class="col-sm-5">Amount</dt><dd class="col-sm-7"><?= e(money($sub['price'])) ?> / <?= e(strtolower(BillingCycle::label($sub['billing_cycle']))) ?> <span class="text-muted small">+ GST</span></dd>
+                    <?php if (can_see_prices()): ?>
+                        <dt class="col-sm-5">Amount</dt><dd class="col-sm-7"><?= e(money($sub['price'])) ?> / <?= e(strtolower(BillingCycle::label($sub['billing_cycle']))) ?> <span class="text-muted small">+ GST</span></dd>
+                    <?php else: ?>
+                        <dt class="col-sm-5">Billing</dt><dd class="col-sm-7"><?= e(BillingCycle::label($sub['billing_cycle'])) ?></dd>
+                    <?php endif; ?>
                     <dt class="col-sm-5">Start date</dt><dd class="col-sm-7"><?= e(fmt_date($sub['start_date'])) ?></dd>
                     <dt class="col-sm-5">Current period</dt><dd class="col-sm-7"><?= e(fmt_date($sub['current_period_start'])) ?> – <?= e(fmt_date($sub['current_period_end'])) ?></dd>
                     <dt class="col-sm-5">Renewal</dt><dd class="col-sm-7"><?= $sub['auto_renew'] && in_array($sub['status'], ['active', 'suspended'], true) ? e(fmt_date($sub['renewal_date'])) . ' (automatic)' : 'Does not renew' ?></dd>

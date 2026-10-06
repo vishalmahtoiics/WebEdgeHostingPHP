@@ -206,6 +206,12 @@ function can(string $permission): bool
     return Auth::can($permission);
 }
 
+/** Prices, invoices and payments: staff, and the customer's owner (admin) users only. */
+function can_see_prices(): bool
+{
+    return Auth::canSeePrices();
+}
+
 function brand_name(): string
 {
     return (string) setting('brand.name');

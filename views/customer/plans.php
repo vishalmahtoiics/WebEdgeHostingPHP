@@ -2,7 +2,8 @@
 use App\Controllers\Admin\PlansController;
 use App\Support\BillingCycle;
 ?>
-<p class="text-muted">Our hosting plans. Prices <?= App\Core\Settings::bool('gst.prices_inclusive') ? 'include' : 'exclude' ?> GST. To switch plans, contact <?= e(setting('contact.email') ?: 'support') ?>.</p>
+<?php $prices = can_see_prices(); ?>
+<p class="text-muted">Our hosting plans.<?php if ($prices): ?> Prices <?= App\Core\Settings::bool('gst.prices_inclusive') ? 'include' : 'exclude' ?> GST.<?php else: ?> Prices are shown to your account's owner.<?php endif; ?> To switch plans, contact <?= e(setting('contact.email') ?: 'support') ?>.</p>
 <?php if (!$plans): ?>
     <div class="card"><?= partial('partials/empty', ['icon' => 'box-seam', 'message' => 'No plans are available right now']) ?></div>
 <?php endif; ?>
@@ -15,7 +16,8 @@ use App\Support\BillingCycle;
                         <h2 class="h5"><?= e($p['name']) ?></h2>
                         <?php if ($isCurrent): ?><span class="badge text-bg-primary">Your plan</span><?php endif; ?>
                     </div>
-                    <div class="mb-2"><span class="fs-3 fw-bold"><?= e(money($p['price'])) ?></span> <span class="text-muted">/ <?= e(strtolower(BillingCycle::label($p['billing_cycle']))) ?></span></div>
+                    <?php if ($prices): ?><div class="mb-2"><span class="fs-3 fw-bold"><?= e(money($p['price'])) ?></span> <span class="text-muted">/ <?= e(strtolower(BillingCycle::label($p['billing_cycle']))) ?></span></div>
+                    <?php else: ?><div class="mb-2 text-muted small"><?= e(BillingCycle::label($p['billing_cycle'])) ?> plan</div><?php endif; ?>
                     <?php if ($p['description']): ?><p class="small text-muted"><?= e($p['description']) ?></p><?php endif; ?>
                     <ul class="list-unstyled small mb-3">
                         <?php foreach (PlansController::LIMITS as $col => [$label, $unit]): ?>

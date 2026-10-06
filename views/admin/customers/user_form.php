@@ -30,9 +30,9 @@ $action = $editing ? "/admin/customers/{$customer['id']}/users/{$user['id']}/edi
         <hr>
         <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" id="is_owner" name="is_owner" value="1"<?= checked($user['is_owner'] ?? old('is_owner')) ?>>
-            <label class="form-check-label" for="is_owner"><strong>Account owner</strong> — full access to everything in this account</label>
+            <label class="form-check-label" for="is_owner"><strong>Account owner</strong> — full access to everything in this account, including prices, invoices and payments</label>
         </div>
-        <p class="small text-muted mb-2">Otherwise, choose what this user can manage:</p>
+        <p class="small text-muted mb-2">Otherwise, choose what this user can manage. Other users can see the hosting plan, but not its price, invoices or payments.</p>
         <div class="row g-2">
             <?php foreach (Permissions::customer() as $key => $label): ?>
                 <div class="col-sm-6 col-lg-4">

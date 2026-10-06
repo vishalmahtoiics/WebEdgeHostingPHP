@@ -41,7 +41,7 @@ $canBilling = can('billing');
 <div class="row g-3">
     <div class="col-lg-7">
         <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between"><span>Hosting plan</span><?php if ($canBilling): ?><a class="small fw-normal" href="<?= e(url('/customer/subscription')) ?>">Manage</a><?php endif; ?></div>
+            <div class="card-header d-flex justify-content-between"><span>Hosting plan</span><a class="small fw-normal" href="<?= e(url('/customer/subscription')) ?>">Details</a></div>
             <div class="card-body">
                 <?php if (!$sub): ?>
                     <?= partial('partials/empty', ['icon' => 'box-seam', 'message' => 'You do not have a hosting plan yet', 'hint' => 'Contact us to get started.']) ?>
@@ -49,7 +49,7 @@ $canBilling = can('billing');
                     <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
                         <div>
                             <div class="h5 mb-1"><?= e($sub['plan_name']) ?> <?= status_badge($sub['status']) ?></div>
-                            <div class="text-muted small"><?= e(money($sub['price'])) ?> / <?= e(strtolower(BillingCycle::label($sub['billing_cycle']))) ?></div>
+                            <div class="text-muted small"><?= can_see_prices() ? e(money($sub['price'])) . ' / ' . e(strtolower(BillingCycle::label($sub['billing_cycle']))) : e(BillingCycle::label($sub['billing_cycle'])) . ' plan' ?></div>
                         </div>
                         <div class="text-md-end small">
                             <?php if ($sub['auto_renew'] && in_array($sub['status'], ['active', 'suspended'], true)): ?>

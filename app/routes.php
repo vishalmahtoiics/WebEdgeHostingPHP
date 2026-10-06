@@ -275,9 +275,10 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 // Customer panel
 $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
     $r->get('', [Customer\DashboardController::class, 'index']);
+    // Every customer user can see the plan; prices are shown to owners only (can_see_prices()).
+    $r->get('/subscription', [Customer\BillingController::class, 'subscription']);
+    $r->get('/plans', [Customer\BillingController::class, 'plans']);
     $r->group('', ['perm' => 'billing'], static function ($r): void {
-        $r->get('/subscription', [Customer\BillingController::class, 'subscription']);
-        $r->get('/plans', [Customer\BillingController::class, 'plans']);
         $r->get('/invoices', [Customer\BillingController::class, 'invoices']);
         $r->get('/invoices/{id}', [Customer\BillingController::class, 'invoice']);
         $r->get('/invoices/{id}/print', [Customer\BillingController::class, 'printInvoice']);

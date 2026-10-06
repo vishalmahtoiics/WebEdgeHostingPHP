@@ -178,6 +178,17 @@ final class Auth
         return (bool) DB::value('SELECT is_super FROM roles WHERE id = ?', [$u['role_id']]);
     }
 
+    /**
+     * Hosting prices, invoices and payments are shown to staff and to the
+     * customer's owner (admin) users only; other customer users see their
+     * plan without prices.
+     */
+    public static function canSeePrices(): bool
+    {
+        $u = self::user();
+        return $u !== null && ($u['type'] === 'admin' || !empty($u['is_owner']));
+    }
+
     public static function can(string $permission): bool
     {
         $u = self::user();
@@ -194,7 +205,8 @@ final class Auth
                     ? ['*']
                     : DB::column('SELECT permission FROM role_permissions WHERE role_id = ?', [(int) $u['role_id']]);
             } else {
-                self::$permissions = $u['is_owner'] ? ['*'] : (json_decode((string) $u['permissions'], true) ?: []);
+                // "billing" (invoices and payments) belongs to owners only, even if it was granted earlier.
+                self::$permissions = $u['is_owner'] ? ['*'] : array_values(array_diff(json_decode((string) $u['permissions'], true) ?: [], ['billing']));
             }
         }
         if (in_array('*', self::$permissions, true) || in_array($permission, self::$permissions, true)) {

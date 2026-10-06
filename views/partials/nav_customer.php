@@ -13,8 +13,8 @@ $sections = [
         ['SSL certificates', 'shield-lock', '/customer/ssl', null],
     ],
     'Billing' => [
-        ['Subscription', 'arrow-repeat', '/customer/subscription', 'billing'],
-        ['Plans', 'box-seam', '/customer/plans', 'billing', false, 'customer.show_plans'],
+        ['Subscription', 'arrow-repeat', '/customer/subscription', null],
+        ['Plans', 'box-seam', '/customer/plans', null, false, 'customer.show_plans'],
         ['Invoices', 'receipt', '/customer/invoices', 'billing'],
     ],
     'Account' => [

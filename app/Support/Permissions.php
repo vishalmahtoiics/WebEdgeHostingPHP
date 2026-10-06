@@ -47,7 +47,6 @@ final class Permissions
             'files' => 'File manager',
             'databases' => 'Databases',
             'email' => 'Email',
-            'billing' => 'Subscription & invoices',
         ];
     }
 }

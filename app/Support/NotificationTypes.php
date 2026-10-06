@@ -5,6 +5,15 @@ namespace App\Support;
 
 final class NotificationTypes
 {
+    /** Notifications that mention amounts: shown only to users who may see prices. */
+    public const PRICED = ['invoice_generated', 'payment_received'];
+
+    /** SQL condition limiting a customer's notifications to what the signed-in user may see. */
+    public static function visibleSql(): string
+    {
+        return can_see_prices() ? '1 = 1' : "type NOT IN ('" . implode("', '", self::PRICED) . "')";
+    }
+
     public static function all(): array
     {
         return [

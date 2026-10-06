@@ -27,7 +27,7 @@ final class DashboardController extends Controller
                 [$cid]
             ),
             'nextInvoice' => DB::one("SELECT * FROM invoices WHERE customer_id = ? AND status IN ('pending','due','failed') ORDER BY due_date LIMIT 1", [$cid]),
-            'notifications' => DB::all('SELECT * FROM notifications WHERE customer_id = ? ORDER BY is_read, id DESC LIMIT 5', [$cid]),
+            'notifications' => DB::all('SELECT * FROM notifications WHERE customer_id = ? AND ' . \App\Support\NotificationTypes::visibleSql() . ' ORDER BY is_read, id DESC LIMIT 5', [$cid]),
             'activities' => DB::all('SELECT * FROM activity_logs WHERE customer_id = ? AND ' . Logger::customerVisibleSql() . ' ORDER BY id DESC LIMIT 6', [$cid]),
         ]);
     }

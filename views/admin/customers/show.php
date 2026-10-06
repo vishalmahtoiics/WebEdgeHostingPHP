@@ -90,7 +90,7 @@ $manage = can('customers.manage');
                             <td><div class="fw-medium"><?= e($u['name']) ?></div><div class="small text-muted"><?= e($u['email']) ?></div></td>
                             <td class="small">
                                 <?php if ($u['is_owner']): ?><span class="badge text-bg-primary">Owner · full access</span>
-                                <?php else: ?><?= e(implode(', ', array_map(static fn ($p) => Permissions::customer()[$p] ?? $p, $perms)) ?: 'Profile only') ?><?php endif; ?>
+                                <?php else: ?><?= e(implode(', ', array_values(array_intersect_key(Permissions::customer(), array_flip($perms)))) ?: 'Profile only') ?><?php endif; ?>
                             </td>
                             <td><?= status_badge($u['status']) ?></td>
                             <td class="small text-muted"><?= e($u['last_login_at'] ? fmt_datetime($u['last_login_at']) . ' · ' . $u['last_login_ip'] : 'Never') ?></td>
