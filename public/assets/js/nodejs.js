@@ -158,5 +158,14 @@
         };
         fw.addEventListener('change', mark);
         mark();
+        // "PHP / static website" is not a Node.js framework: point to the PHP / static deploy instead.
+        var staticNote = document.querySelector('[data-static-note]');
+        var toggleStatic = function () {
+            var on = fw.value === '__static';
+            if (staticNote) { staticNote.hidden = !on; }
+            document.querySelectorAll('[data-node-deploy]').forEach(function (b) { b.disabled = on; });
+        };
+        fw.addEventListener('change', toggleStatic);
+        toggleStatic();
     }
 })();

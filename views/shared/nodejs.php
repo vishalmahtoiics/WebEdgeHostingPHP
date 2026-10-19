@@ -12,6 +12,23 @@ $sourceLabel = ['upload' => 'Zip upload', 'git' => 'Git', 'webhook' => 'Git push
 $settings = $app && $app['settings'] ? json_decode((string) $app['settings'], true) : null;
 $isGit = $app && $app['source'] === 'git' && $app['git_repo'];
 $fv = static fn (string $k) => old($k, $form[$k] ?? '');
+// Link to the PHP / static deploy, with this repository filled in when there is one.
+$staticUrl = null;
+if (!empty($gitUrl)) {
+    $q = [];
+    if ($isGit) {
+        $q = ['repo' => NodejsService::repoUrl($app), 'branch' => $app['git_branch']];
+        $dir = trim((string) ($form['root_directory'] ?? ''), './');
+        $top = $app['git_repo'] . '-' . str_replace('/', '-', (string) $app['git_branch']);
+        if (str_starts_with($dir . '/', $top . '/')) {
+            $dir = trim(substr($dir, strlen($top)), '/');
+        }
+        if ($dir !== '') {
+            $q['source_dir'] = $dir;
+        }
+    }
+    $staticUrl = url($gitUrl, $q);
+}
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
     <div>
@@ -62,7 +79,16 @@ $fv = static fn (string $k) => old($k, $form[$k] ?? '');
                 <div class="col-md-4"><label class="form-label" for="app_type">Framework</label>
                     <select class="form-select" id="app_type" name="app_type" data-needs-entry="<?= e(implode(',', NodejsService::NEEDS_ENTRY)) ?>">
                         <?php foreach (NodejsService::APP_TYPES as $k => $l): ?><option value="<?= e($k) ?>"<?= selected($fv('app_type'), $k) ?>><?= e($l) ?></option><?php endforeach; ?>
+                        <?php if ($staticUrl): ?><optgroup label="Not a Node.js app"><option value="__static">PHP / static website (HTML, PHP)</option></optgroup><?php endif; ?>
                     </select></div>
+                <?php if ($staticUrl): ?>
+                    <div class="col-12" data-static-note hidden>
+                        <div class="alert alert-info small mb-0 d-flex flex-wrap align-items-center gap-2">
+                            <span class="flex-grow-1"><i class="bi bi-filetype-php me-1"></i><b>PHP or static website?</b> These are not built with Node.js: their files are copied to the website as they are. Use the PHP / static deploy instead – your repository is filled in.</span>
+                            <a class="btn btn-sm btn-primary" href="<?= e($staticUrl) ?>"><i class="bi bi-git me-1"></i>Deploy as PHP / static website</a>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <div class="col-md-4"><label class="form-label" for="node_version">Node.js version</label>
                     <select class="form-select" id="node_version" name="node_version">
                         <?php foreach (NodejsService::NODE_VERSIONS as $v): ?><option value="<?= $v ?>"<?= selected((string) $fv('node_version'), (string) $v) ?>>Node <?= $v ?></option><?php endforeach; ?>
@@ -83,7 +109,7 @@ $fv = static fn (string $k) => old($k, $form[$k] ?? '');
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="confirm" name="confirm" value="1"><label class="form-check-label" for="confirm">I understand — replace the website with this app</label></div>
                 </div>
             </div>
-            <div class="card-footer bg-white text-end"><button class="btn btn-primary"><i class="bi bi-rocket-takeoff me-1"></i>Deploy now</button></div>
+            <div class="card-footer bg-white text-end"><button class="btn btn-primary" data-node-deploy><i class="bi bi-rocket-takeoff me-1"></i>Deploy now</button></div>
         </form>
     </div>
 <?php endif; ?>

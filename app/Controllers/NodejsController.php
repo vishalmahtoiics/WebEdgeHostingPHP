@@ -143,6 +143,9 @@ abstract class NodejsController extends Controller
     public function build(int $id): string
     {
         $w = $this->website($id);
+        if (input_str('app_type') === '__static') {
+            redirect($this->websiteUrl($id) . '/git'); // PHP / static sites are deployed by copying files
+        }
         if (!input('confirm')) {
             $this->failed($this->base($id) . '#review', ["Tick the box to confirm that the deploy replaces the current files of {$w['domain']}."]);
         }

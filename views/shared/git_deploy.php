@@ -43,15 +43,15 @@ $badge = static function (?string $s): string {
             <div class="card-body">
                 <p class="small text-muted">Deploy a PHP or static website (HTML, CSS, JS, Laravel <code>public</code> folder, a built <code>dist</code> folder…) straight from GitHub or GitLab. The files of the branch are copied into your website; there is no build step on the server.</p>
                 <div class="mb-3"><label class="form-label" for="repo">Repository address</label>
-                    <input class="form-control" id="repo" name="repo" value="<?= e((string) old('repo', $repoUrl)) ?>" placeholder="https://github.com/you/website" required></div>
+                    <input class="form-control" id="repo" name="repo" value="<?= e((string) old('repo', $repoUrl ?: query('repo'))) ?>" placeholder="https://github.com/you/website" required></div>
                 <div class="row g-2 mb-3">
-                    <div class="col-sm-5"><label class="form-label" for="branch">Branch</label><input class="form-control" id="branch" name="branch" value="<?= e((string) old('branch', $cfg['git_branch'] ?? 'main')) ?>" placeholder="main"></div>
+                    <div class="col-sm-5"><label class="form-label" for="branch">Branch</label><input class="form-control" id="branch" name="branch" value="<?= e((string) old('branch', $cfg['git_branch'] ?? (query('branch') ?: 'main'))) ?>" placeholder="main"></div>
                     <div class="col-sm-7"><label class="form-label" for="token">Access token <span class="text-muted small">(private repositories only)</span></label>
                         <input type="password" class="form-control" id="token" name="token" placeholder="<?= $cfg && $cfg['git_token'] ? 'Saved — leave empty to keep' : 'ghp_… or glpat-…' ?>" autocomplete="new-password"></div>
                 </div>
                 <?php if ($cfg && $cfg['git_token']): ?><div class="form-check small mb-3"><input class="form-check-input" type="checkbox" name="clear_token" value="1" id="clear_token"><label class="form-check-label" for="clear_token">Remove the saved token</label></div><?php endif; ?>
                 <div class="row g-2 mb-3">
-                    <div class="col-sm-6"><label class="form-label" for="source_dir">Folder in the repository to publish</label><input class="form-control" id="source_dir" name="source_dir" value="<?= e($v('source_dir')) ?>" placeholder="Whole repository">
+                    <div class="col-sm-6"><label class="form-label" for="source_dir">Folder in the repository to publish</label><input class="form-control" id="source_dir" name="source_dir" value="<?= e($cfg ? $v('source_dir') : (string) old('source_dir', query('source_dir'))) ?>" placeholder="Whole repository">
                         <div class="form-text">For example <code>public</code> or <code>dist</code>. Empty = everything.</div></div>
                     <div class="col-sm-6"><label class="form-label" for="target_dir">Folder on the website</label><input class="form-control" id="target_dir" name="target_dir" value="<?= e($v('target_dir')) ?>" placeholder="Website root">
                         <div class="form-text">Empty = the website's main folder.</div></div>

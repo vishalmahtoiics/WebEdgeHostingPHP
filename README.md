@@ -264,7 +264,7 @@ Also on that page: **environment variables** (saved at the provider and restart 
 
 ## Deploy PHP / static websites from Git
 
-Every website has a **Deploy from Git** card – for admins with the file manager permission and for customers with *File manager* access – even when the hosting detected it as a Node.js site. Deploys need file access (website page → *File access*). The deploy pages have a **Project type** switch between *PHP / static website* and *Node.js app*.
+Every website has a **Deploy from Git** card – for admins with the file manager permission and for customers with *File manager* access – even when the hosting detected it as a Node.js site. Deploys need file access (website page → *File access*). The deploy pages have a **Project type** switch between *PHP / static website* and *Node.js app*. On the Node.js review screen the *Framework* list also has **PHP / static website**: choosing it stops the Node.js deploy and links to the PHP / static deploy with the same repository and folder filled in.
 
 - Enter a **GitHub or GitLab** repository and branch (and an access token for private repositories; it is stored encrypted and never shown again).
 - **Deploy now** downloads the branch as a zip and copies its files into the website through its file access (FTP or direct). No git or build tools are needed on the server, so it suits plain PHP, HTML/CSS/JS, WordPress themes, Laravel's `public` folder or a committed `dist` build.
