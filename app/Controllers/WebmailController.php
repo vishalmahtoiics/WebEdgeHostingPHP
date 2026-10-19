@@ -166,7 +166,9 @@ final class WebmailController extends Controller
             $mode = query('mode');
             $f = ['to' => '', 'cc' => '', 'bcc' => '', 'subject' => '', 'body' => '', 'in_reply_to' => '', 'references' => '',
                 'reply_folder' => '', 'reply_uid' => '', 'fwd_folder' => '', 'fwd_uid' => '', 'draft_uid' => '', 'fwd_files' => []];
-            $sig = trim($prefs['signature']) !== '' ? "\n\n-- \n" . $prefs['signature'] : '';
+            $htmlSig = $prefs['signature_mode'] === 'html' && $prefs['signature_html'] !== '';
+            // An HTML signature is shown under the editor and added when the message is sent.
+            $sig = !$htmlSig && trim($prefs['signature']) !== '' ? "\n\n-- \n" . $prefs['signature'] : '';
             if (in_array($mode, ['reply', 'replyall', 'forward', 'draft'], true)) {
                 $folder = $this->folderParam($folders);
                 $uid = (int) query('uid');
@@ -217,8 +219,10 @@ final class WebmailController extends Controller
                 $f['to'] = mb_substr(query('to'), 0, 300);
                 $f['body'] = $sig;
             }
+            $this->previewImagesPolicy();
             return $this->page('webmail/compose', ['title' => 'New message', 'folders' => $folders, 'folder' => '', 'f' => $f,
-                'maxMb' => max(1, Settings::int('webmail.max_attachment_mb'))]);
+                'maxMb' => max(1, Settings::int('webmail.max_attachment_mb')),
+                'htmlSignature' => $htmlSig && $mode !== 'draft' ? $prefs['signature_html'] : '']);
         });
     }
 
@@ -313,7 +317,11 @@ final class WebmailController extends Controller
                 $refs = implode(' ', array_slice(array_filter(preg_split('/\s+/', input_str('references')) ?: [], static fn ($r) => (bool) preg_match('/^<[^<>\s]+>$/', $r)), -20));
                 $extra['References'] = $refs !== '' ? $refs : $irt;
             }
-            $built = Mime::build(['email' => $user['email'], 'name' => $prefs['display_name']], $to, $cc, $bcc, $subject, $text, $files, $extra, true);
+            $html = null;
+            if (!$isDraft && input('add_signature') !== null && $prefs['signature_mode'] === 'html' && $prefs['signature_html'] !== '') {
+                [$text, $html] = self::withHtmlSignature($text, $prefs['signature_html']);
+            }
+            $built = Mime::build(['email' => $user['email'], 'name' => $prefs['display_name']], $to, $cc, $bcc, $subject, $text, $files, $extra, true, $html);
             $raw = $built['raw'];
 
             $draftsFolder = $this->specialFolder($folders, 'drafts', 'Drafts');
@@ -461,9 +469,35 @@ final class WebmailController extends Controller
 
     // ------------------------------------------------------------------ settings
 
+    /**
+     * Add an HTML signature after what the sender wrote and before any quoted
+     * reply or forwarded message. Returns [text version, HTML version].
+     */
+    private static function withHtmlSignature(string $text, string $signatureHtml): array
+    {
+        $cut = strlen($text);
+        if (preg_match('/^(On .{1,300} wrote:|---------- Forwarded message ----------)$/m', $text, $m, PREG_OFFSET_CAPTURE)) {
+            $cut = (int) $m[0][1];
+        }
+        $mine = rtrim(substr($text, 0, $cut));
+        $rest = ltrim(substr($text, $cut), "\r\n");
+        $sigText = Webmail::signatureText($signatureHtml);
+        $plain = $mine . "\n\n-- \n" . $sigText . ($rest !== '' ? "\n\n" . $rest : '');
+        $html = HtmlSanitizer::textToHtml($mine) . '<br><div class="signature">' . $signatureHtml . '</div>'
+            . ($rest !== '' ? '<br>' . HtmlSanitizer::textToHtml($rest) : '');
+        return [$plain, $html];
+    }
+
+    /** Signature previews may show images linked from the sender's website. */
+    private function previewImagesPolicy(): void
+    {
+        header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'");
+    }
+
     public function settings(): string
     {
         $user = $this->user();
+        $this->previewImagesPolicy();
         return $this->mail(fn (): string => $this->page('webmail/settings', [
             'title' => 'Settings', 'folders' => $this->folders(), 'folder' => '',
             'prefs' => Webmail::prefs($user['email']),
@@ -474,7 +508,17 @@ final class WebmailController extends Controller
     public function saveSettings(): string
     {
         $user = $this->user();
-        Webmail::savePrefs($user['email'], trim(input_str('display_name')), (string) ($_POST['signature'] ?? ''), (int) input('page_size', 50));
+        $html = (string) ($_POST['signature_html'] ?? '');
+        if (strlen($html) > Webmail::SIGNATURE_HTML_MAX) {
+            Session::flashInput($_POST);
+            flash('danger', 'The HTML signature is too large (maximum ' . (int) (Webmail::SIGNATURE_HTML_MAX / 1000) . ' KB). Link to images on your website instead of embedding big pictures.');
+            redirect('/mails/settings');
+        }
+        $mode = input_str('signature_mode') === 'html' ? 'html' : 'text';
+        if ($mode === 'html' && Webmail::cleanSignature($html) === '') {
+            $mode = 'text';
+        }
+        Webmail::savePrefs($user['email'], trim(input_str('display_name')), (string) ($_POST['signature'] ?? ''), (int) input('page_size', 50), $mode, $html);
         flash('success', 'Settings saved.');
         redirect('/mails/settings');
     }

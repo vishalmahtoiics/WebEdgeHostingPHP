@@ -265,6 +265,8 @@ body.we-loading-open { overflow: hidden; }
 .wm-field .form-control { border: 0; box-shadow: none; padding: .8rem 0; border-radius: 0; }
 .wm-field-toggle { font-size: .85rem; color: var(--wm-muted); text-decoration: none; white-space: nowrap; }
 .wm-editor { border: 0; box-shadow: none !important; padding: 1rem 1.5rem; min-height: 340px; font-family: inherit; line-height: 1.6; resize: vertical; border-radius: 0; }
+.wm-sig-box { padding: .25rem 1.5rem .75rem; }
+.wm-sig-preview { display: block; width: 100%; min-height: 110px; border: 1px dashed var(--wm-line, #e5e7eb); border-radius: 10px; background: #fff; }
 .wm-compose-foot { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding: .85rem 1.5rem 0; border-top: 1px solid var(--wm-line); }
 .wm-send { border-radius: 999px; padding: .55rem 1.5rem; font-weight: 600; }
 .wm-attach-label { display: inline-flex; align-items: center; gap: .4rem; color: #4b5563; font-size: .88rem; cursor: pointer; }

@@ -293,6 +293,7 @@ Security:
 Database updates are applied automatically on the first page load after you upload new panel files (you can still run `php bin/migrate.php` by hand).
 
 If you tried the earlier Roundcube version, delete any `public/mails` folder inside the panel. A folder with that name would hide the built-in webmail. You can also delete `storage/webmail/`.
+- **Signatures:** in webmail **Settings**, each user picks a *Plain text* or *HTML* signature. An HTML signature (logo, colours, links – for example pasted from a signature generator) is shown with a live preview and cleaned when saved (no scripts, forms or event handlers; images from https links or embedded). When composing, the signature shows under the message with an *Add my signature* switch; it is added when the message is sent – below what you wrote and above any quoted reply – and the email goes out with both an HTML and a plain-text version. Drafts are saved without it.
 
 ## Online payments (Razorpay)
 

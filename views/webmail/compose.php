@@ -19,6 +19,14 @@ $showCc = $f['cc'] !== '' || $f['bcc'] !== '';
     </div>
     <div class="wm-field"><label for="subject">Subject</label><input class="form-control" id="subject" name="subject" value="<?= e($f['subject']) ?>" maxlength="500"></div>
     <textarea class="form-control wm-editor" name="body" rows="16" aria-label="Message" placeholder="Write your message…"><?= e($f['body']) ?></textarea>
+    <?php if (!empty($htmlSignature)): ?>
+        <div class="wm-sig-box">
+            <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" name="add_signature" value="1" id="add_signature" checked>
+                <label class="form-check-label small" for="add_signature">Add my signature</label>
+                <a class="small ms-2" href="<?= e(url('/mails/settings')) ?>">Edit</a></div>
+            <iframe class="wm-sig-preview" title="Your signature" sandbox="" referrerpolicy="no-referrer" srcdoc="<?= e('<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>body{margin:0;padding:8px 0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2937}img{max-width:100%;height:auto}</style></head><body>' . $htmlSignature . '</body></html>') ?>"></iframe>
+        </div>
+    <?php endif; ?>
     <?php if ($f['fwd_files']): ?>
         <div class="px-4 pb-3 small"><div class="text-muted fw-semibold mb-1">Forwarded attachments</div>
             <?php foreach ($f['fwd_files'] as $p): $id = 'fk' . str_replace('.', '_', $p['id']); ?>

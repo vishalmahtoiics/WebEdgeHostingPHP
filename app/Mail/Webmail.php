@@ -186,17 +186,46 @@ final class Webmail
         return [
             'display_name' => (string) ($p['display_name'] ?? ($mb['display_name'] ?? '')),
             'signature' => (string) ($p['signature'] ?? ''),
+            'signature_mode' => ($p['signature_mode'] ?? 'text') === 'html' ? 'html' : 'text',
+            'signature_html' => (string) ($p['signature_html'] ?? ''),
             'page_size' => (int) ($p['page_size'] ?? 50) ?: 50,
         ];
     }
 
-    public static function savePrefs(string $email, string $name, string $signature, int $pageSize): void
+    /** Largest HTML signature accepted (images embedded as data: URLs count too). */
+    public const SIGNATURE_HTML_MAX = 200_000;
+
+    public static function savePrefs(string $email, string $name, string $signature, int $pageSize, string $mode = 'text', string $signatureHtml = ''): void
     {
         DB::run(
-            'INSERT INTO webmail_prefs (email, display_name, signature, page_size, updated_at) VALUES (?, ?, ?, ?, NOW())
-             ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), signature = VALUES(signature), page_size = VALUES(page_size), updated_at = NOW()',
-            [$email, mb_substr($name, 0, 150), mb_substr($signature, 0, 5000), max(10, min(200, $pageSize))]
+            'INSERT INTO webmail_prefs (email, display_name, signature, signature_mode, signature_html, page_size, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), signature = VALUES(signature), signature_mode = VALUES(signature_mode),
+                signature_html = VALUES(signature_html), page_size = VALUES(page_size), updated_at = NOW()',
+            [$email, mb_substr($name, 0, 150), mb_substr($signature, 0, 5000), $mode === 'html' ? 'html' : 'text',
+                self::cleanSignature($signatureHtml), max(10, min(200, $pageSize))]
         );
+    }
+
+    /** HTML signature made safe: no scripts, forms or event handlers; images by https link or embedded. */
+    public static function cleanSignature(string $html): string
+    {
+        $html = trim($html);
+        if ($html === '') {
+            return '';
+        }
+        $clean = HtmlSanitizer::clean($html, static fn (string $id): ?string => null)['html'];
+        // Signatures are small; links open normally in the recipient's mail app.
+        return trim((string) preg_replace('/\s(target="_blank"|rel="noopener noreferrer nofollow")/', '', $clean));
+    }
+
+    /** Plain-text version of an HTML signature (for the text part of the email). */
+    public static function signatureText(string $html): string
+    {
+        $t = (string) preg_replace('/<(br|\/p|\/div|\/tr|\/h\d|\/li)[^>]*>/i', "\n", $html);
+        $t = (string) preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $t);
+        $t = html_entity_decode(strip_tags($t), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $lines = array_map('trim', explode("\n", str_replace("\r", '', $t)));
+        return trim((string) preg_replace("/\n{3,}/", "\n\n", implode("\n", $lines)));
     }
 
     /**

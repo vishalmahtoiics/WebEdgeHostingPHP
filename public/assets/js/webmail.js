@@ -40,4 +40,23 @@
             if (!window.confirm(a.getAttribute('data-confirm'))) e.preventDefault();
         });
     });
+    // Settings: switch between plain-text and HTML signature, with a live preview.
+    var modes = document.querySelectorAll('[data-sig-mode]');
+    modes.forEach(function (r) {
+        r.addEventListener('change', function () {
+            document.querySelectorAll('[data-sig-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-sig-panel') !== r.value; });
+        });
+    });
+    var src = document.querySelector('[data-sig-source]');
+    var frame = document.querySelector('[data-sig-preview]');
+    if (src && frame) {
+        var timer;
+        src.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                // The preview frame is sandboxed (no scripts); the server cleans the HTML again on save.
+                frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>body{margin:0;padding:12px;font:14px/1.5 system-ui,sans-serif;color:#1f2937}img{max-width:100%;height:auto}</style></head><body>' + src.value + '</body></html>';
+            }, 250);
+        });
+    }
 })();

@@ -332,7 +332,7 @@ final class Mime
      * Build a message. $attachments: list of [filename, type, data].
      * @return array{raw: string, message_id: string}
      */
-    public static function build(array $from, array $to, array $cc, array $bcc, string $subject, string $text, array $attachments = [], array $extraHeaders = [], bool $includeBcc = false): array
+    public static function build(array $from, array $to, array $cc, array $bcc, string $subject, string $text, array $attachments = [], array $extraHeaders = [], bool $includeBcc = false, ?string $html = null): array
     {
         $domain = substr((string) strrchr($from['email'], '@'), 1) ?: 'localhost';
         $messageId = '<' . bin2hex(random_bytes(12)) . '@' . $domain . '>';
@@ -358,6 +358,15 @@ final class Mime
 
         $normalized = str_replace("\n", "\r\n", str_replace(["\r\n", "\r"], "\n", $text));
         $textPart = "Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n" . quoted_printable_encode($normalized);
+        if ($html !== null) {
+            // Text and HTML versions of the same message (multipart/alternative).
+            $alt = '=_alt' . bin2hex(random_bytes(10));
+            $htmlDoc = "<!doctype html>\n<html><head><meta charset=\"utf-8\"></head><body>" . $html . "</body></html>";
+            $htmlNorm = str_replace("\n", "\r\n", str_replace(["\r\n", "\r"], "\n", $htmlDoc));
+            $textPart = "Content-Type: multipart/alternative; boundary=\"$alt\"\r\n\r\n--$alt\r\n" . $textPart
+                . "\r\n--$alt\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n"
+                . quoted_printable_encode($htmlNorm) . "\r\n--$alt--";
+        }
         if (!$attachments) {
             $head = '';
             foreach ($h as $k => $v) {
