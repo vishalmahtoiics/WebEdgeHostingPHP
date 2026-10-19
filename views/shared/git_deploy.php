@@ -28,6 +28,7 @@ $badge = static function (?string $s): string {
     </div>
 </div>
 
+<?= partial('partials/deploy_tabs', ['active' => 'git', 'gitUrl' => $base, 'nodeUrl' => $nodeUrl]) ?>
 <?php if (!$available): ?>
     <div class="alert alert-warning"><i class="bi bi-folder-x me-1"></i><?= $isAdmin
         ? 'File access is not set up for this website. Set it up on the website page (File access) so the panel can copy files into it.'

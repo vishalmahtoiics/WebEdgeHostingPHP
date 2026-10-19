@@ -7,6 +7,7 @@ use App\Core\Auth;
 use App\Core\DB;
 use App\Core\Logger;
 use App\Services\GitDeployService;
+use App\Services\NodejsService;
 use RuntimeException;
 
 /**
@@ -40,6 +41,7 @@ abstract class GitDeployController extends Controller
             'available' => GitDeployService::available($w),
             'webhookUrl' => $cfg ? absolute_url('/webhooks/git/' . $cfg['id'] . '/' . $cfg['webhook_secret']) : null,
             'isAdmin' => $this->isAdmin(),
+            'nodeUrl' => $this->nodeAvailable($w) ? $this->websiteUrl($id) . '/nodejs' : null,
         ]);
     }
 
@@ -79,6 +81,15 @@ abstract class GitDeployController extends Controller
         GitDeployService::remove($id);
         Logger::activity('websites', 'git_settings', "Git deploys disconnected for {$w['domain']}", 'website', $id, $w['customer_id'] ? (int) $w['customer_id'] : null);
         $this->success($this->base($id), 'Repository disconnected. The website files were not changed.');
+    }
+
+    /** Can this user open the Node.js deploy page for the website? */
+    protected function nodeAvailable(array $w): bool
+    {
+        if ($this->isAdmin()) {
+            return can('websites.manage');
+        }
+        return can('websites') && $w['status'] === 'active' && NodejsService::isNodeSite($w) && $w['customer_id'] && NodejsService::customerAllowed((int) $w['customer_id']);
     }
 
     private function requireFiles(array $w, int $id): void

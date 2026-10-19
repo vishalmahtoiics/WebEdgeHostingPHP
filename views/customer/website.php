@@ -49,7 +49,7 @@ $tools = [
     </div>
     <div class="col-lg-6">
         <?php if ($nodeAllowed): ?><?= partial('partials/nodejs_card', ['w' => $w, 'app' => $nodeApp, 'url' => '/customer/websites/' . $w['id'] . '/nodejs', 'admin' => false]) ?><?php endif; ?>
-        <?php if (can('files') && $w['status'] === 'active' && $w['file_access'] !== 'none' && $w['website_type'] !== 'nodejs' && !$nodeApp): ?><?= partial('partials/git_card', ['w' => $w, 'cfg' => App\Services\GitDeployService::config((int) $w['id']), 'url' => '/customer/websites/' . $w['id'] . '/git']) ?><?php endif; ?>
+        <?php if (can('files') && $w['status'] === 'active'): ?><?= partial('partials/git_card', ['w' => $w, 'cfg' => App\Services\GitDeployService::config((int) $w['id']), 'url' => '/customer/websites/' . $w['id'] . '/git']) ?><?php endif; ?>
         <?= partial('partials/ssl_card', ['ssl' => $ssl, 'hostname' => $w['domain'], 'checkUrl' => '/customer/ssl/check']) ?>
         <?php if ($canSslInstall && (!$ssl || $ssl['status'] !== 'active')): ?>
             <form method="post" action="<?= e(url('/customer/websites/' . $w['id'] . '/ssl')) ?>" data-confirm="Install a free SSL certificate for <?= e($w['domain']) ?>?">

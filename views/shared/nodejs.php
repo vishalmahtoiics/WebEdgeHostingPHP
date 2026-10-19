@@ -34,6 +34,7 @@ $fv = static fn (string $k) => old($k, $form[$k] ?? '');
     </div>
 </div>
 
+<?= partial('partials/deploy_tabs', ['active' => 'nodejs', 'nodeUrl' => $base, 'gitUrl' => $gitUrl ?? null]) ?>
 <?php if (!$connected): ?>
     <div class="alert alert-warning"><i class="bi bi-plug me-1"></i><?= $isAdmin
         ? 'This website is not linked to a hosting account with an API (it needs a Hostinger provider account and hosting username). Link it by syncing the provider account.'

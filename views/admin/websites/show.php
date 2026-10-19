@@ -89,7 +89,7 @@ $apiLinked = $w['provider_id'] && $w['external_username'] && ($w['driver'] ?? 'm
     </div>
     <div class="col-lg-6">
         <?php if ($manage): ?><?= partial('partials/nodejs_card', ['w' => $w, 'app' => $nodeApp, 'url' => '/admin/websites/' . $w['id'] . '/nodejs', 'admin' => true]) ?><?php endif; ?>
-        <?php if (can('files.manage') && $w['website_type'] !== 'nodejs' && !$nodeApp): ?><?= partial('partials/git_card', ['w' => $w, 'cfg' => App\Services\GitDeployService::config((int) $w['id']), 'url' => '/admin/websites/' . $w['id'] . '/git']) ?><?php endif; ?>
+        <?php if (can('files.manage')): ?><?= partial('partials/git_card', ['w' => $w, 'cfg' => App\Services\GitDeployService::config((int) $w['id']), 'url' => '/admin/websites/' . $w['id'] . '/git']) ?><?php endif; ?>
         <?= partial('partials/ssl_card', ['ssl' => $ssl, 'hostname' => $w['domain'], 'checkUrl' => '/admin/ssl/check', 'admin' => true]) ?>
         <?php if ($apiLinked && $manage): ?>
             <div class="d-flex gap-2 mb-3">
