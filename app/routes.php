@@ -151,6 +151,12 @@ $router->group('/admin', ['auth' => 'admin'], static function ($r): void {
 
     // File manager
     $r->post('/websites/{id}/file-access', [Admin\FilesController::class, 'access'], ['perm' => 'websites.manage']);
+    $r->group('/websites/{id}/git', ['perm' => 'files.manage'], static function ($r): void {
+        $r->get('', [Admin\GitDeployController::class, 'show']);
+        $r->post('', [Admin\GitDeployController::class, 'save']);
+        $r->post('/deploy', [Admin\GitDeployController::class, 'deploy']);
+        $r->post('/disconnect', [Admin\GitDeployController::class, 'disconnect']);
+    });
     $r->group('/websites/{id}/nodejs', ['perm' => 'websites.manage'], static function ($r): void {
         $r->get('', [Admin\NodejsController::class, 'show']);
         $r->post('/upload', [Admin\NodejsController::class, 'upload']);
@@ -343,6 +349,12 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
         $r->post('/{id}/aliases/{aid}', [Customer\EmailController::class, 'updateAlias']);
         $r->post('/{id}/aliases/{aid}/delete', [Customer\EmailController::class, 'deleteAlias']);
     });
+    $r->group('/websites/{id}/git', ['perm' => 'files'], static function ($r): void {
+        $r->get('', [Customer\GitDeployController::class, 'show']);
+        $r->post('', [Customer\GitDeployController::class, 'save']);
+        $r->post('/deploy', [Customer\GitDeployController::class, 'deploy']);
+        $r->post('/disconnect', [Customer\GitDeployController::class, 'disconnect']);
+    });
     $r->group('/websites/{id}/files', ['perm' => 'files'], static function ($r): void {
         $r->get('', [Customer\FilesController::class, 'index']);
         $r->get('/download', [Customer\FilesController::class, 'download']);
@@ -367,6 +379,8 @@ $router->group('/customer', ['auth' => 'customer'], static function ($r): void {
 $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay'], ['csrf' => false]);
 // Git push webhooks for Node.js apps: authenticated by the secret in the address.
 $router->post('/webhooks/nodejs/{id}/{secret}', [WebhookController::class, 'nodejs'], ['csrf' => false]);
+// Git push webhooks for PHP / static websites.
+$router->post('/webhooks/git/{id}/{secret}', [WebhookController::class, 'git'], ['csrf' => false]);
 
 // Webmail (mailbox address + password; separate from panel accounts)
 $router->group('/mails', [], static function ($r): void {

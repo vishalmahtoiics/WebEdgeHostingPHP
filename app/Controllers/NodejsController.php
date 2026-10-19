@@ -49,7 +49,7 @@ abstract class NodejsController extends Controller
             'isAdmin' => $this->isAdmin(),
             'maxBytes' => NodejsService::maxUploadBytes(),
             'gitAllowed' => Settings::bool('nodejs.git'),
-            'webhookUrl' => $app ? url('/webhooks/nodejs/' . $app['id'] . '/' . $app['webhook_secret']) : null,
+            'webhookUrl' => $app ? absolute_url('/webhooks/nodejs/' . $app['id'] . '/' . $app['webhook_secret']) : null,
         ]);
     }
 

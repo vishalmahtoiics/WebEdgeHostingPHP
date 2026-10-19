@@ -55,4 +55,30 @@ final class WebhookController extends Controller
         }
         return $message;
     }
+
+    public function git(int $id, string $secret): string
+    {
+        header('Content-Type: text/plain; charset=utf-8');
+        $raw = (string) file_get_contents('php://input');
+        $payload = json_decode($raw, true);
+        if (!is_array($payload) && isset($_POST['payload'])) {
+            $payload = json_decode((string) $_POST['payload'], true);
+        }
+        $event = strtolower((string) ($_SERVER['HTTP_X_GITHUB_EVENT'] ?? $_SERVER['HTTP_X_GITLAB_EVENT'] ?? 'push'));
+        [$status, $message] = \App\Services\GitDeployService::webhook($id, $secret, is_array($payload) ? $payload : [], $event);
+        http_response_code($status);
+        if ($status === 202 && $message === 'Deploy started.') {
+            ignore_user_abort(true);
+            register_shutdown_function(static function () use ($id): void {
+                if (function_exists('fastcgi_finish_request')) {
+                    @fastcgi_finish_request();
+                } elseif (function_exists('litespeed_finish_request')) {
+                    @litespeed_finish_request();
+                }
+                @set_time_limit(900);
+                \App\Services\GitDeployService::runWebhookDeploy($id);
+            });
+        }
+        return $message;
+    }
 }

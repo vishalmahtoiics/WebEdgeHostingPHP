@@ -262,6 +262,18 @@ Also on that page: **environment variables** (saved at the provider and restart 
 - **Upload size** is also limited by PHP's `upload_max_filesize` / `post_max_size` (hPanel → Advanced → PHP Configuration). Git deploys are downloaded by the server, so they are not limited by the browser upload.
 - Built against the endpoints in Hostinger's OpenAPI spec v1.56 and tested with a mock server, **not** a live Hostinger account — try one deploy on a test website first.
 
+## Deploy PHP / static websites from Git
+
+Any website with file access set up (website page → *File access*) has a **Deploy from Git** card – for admins with the file manager permission and for customers with *File manager* access.
+
+- Enter a **GitHub or GitLab** repository and branch (and an access token for private repositories; it is stored encrypted and never shown again).
+- **Deploy now** downloads the branch as a zip and copies its files into the website through its file access (FTP or direct). No git or build tools are needed on the server, so it suits plain PHP, HTML/CSS/JS, WordPress themes, Laravel's `public` folder or a committed `dist` build.
+- *Folder in the repository to publish* (e.g. `dist`) and *Folder on the website* (e.g. `app`) choose what goes where.
+- *Never overwrite these files* (default `.env`, `config.php`, `wp-config.php`) keeps server-side settings and uploads that already exist; wildcards work.
+- *Delete files that were removed from the repository* only deletes files an earlier deploy copied – never other files on the website. `.git`, `.github` and unsafe paths are skipped; at most 5,000 files per deploy.
+- **Automatic deploys:** tick the option and add the shown Payload URL as a push webhook in GitHub or GitLab. Pushes to the chosen branch deploy in the background.
+- Every deploy is listed with who started it, how many files were copied/kept/removed, or the error.
+
 ## Selecting many items at once
 
 - **Websites, Domains and Email lists** have checkboxes (and a select-all box). Select items and a bar appears at the bottom: choose a customer and **Assign**, or **Unassign**. With *Include linked website, domain & email* (on by default), everything with the same name moves together — a domain brings its website, its subdomain websites and its email domain. Staff limited to certain domains can only move those; anything else is skipped and counted.
