@@ -53,7 +53,12 @@ function asset(string $path): string
 {
     $file = BASE_PATH . '/public/' . ltrim($path, '/');
     $v = is_file($file) ? substr((string) filemtime($file), -6) : '1';
-    return url($path) . '?v=' . $v;
+    if (PHP_SAPI === 'cli-server') {
+        return url($path) . '?v=' . $v;
+    }
+    // Version in the file name (site.v123456.css), not a query string: Hostinger's CDN
+    // sends "no-store" for query-string requests. public/.htaccess maps it back.
+    return url((string) preg_replace('/\.(\w+)$/', '.v' . $v . '.$1', $path));
 }
 
 function redirect(string $path, array $query = []): never

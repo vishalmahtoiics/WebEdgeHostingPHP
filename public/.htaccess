@@ -1,6 +1,8 @@
 Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # Versioned asset names from asset(): site.bundle.v123456.css -> site.bundle.css
+    RewriteRule ^(.+)\.v\d+\.(css|js|png|jpe?g|webp|gif|svg|ico|woff2?)$ $1.$2 [L]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]
