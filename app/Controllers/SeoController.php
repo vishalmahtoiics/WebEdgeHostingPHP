@@ -51,6 +51,32 @@ final class SeoController extends Controller
         return $txt;
     }
 
+    /** Plain-text summary of the public site for AI assistants (llmstxt.org format). */
+    public function llms(): string
+    {
+        if (!Settings::bool('site.public_home')) {
+            abort(404);
+        }
+        header('Content-Type: text/plain; charset=utf-8');
+        $line = static fn (string $title, string $path, string $desc): string => '- [' . $title . '](' . Seo::abs($path) . ')' . ($desc !== '' ? ': ' . preg_replace('/\s+/', ' ', trim($desc)) : '');
+        $out = ['# ' . Seo::siteName(), '', '> ' . trim((string) Settings::get('seo.home_description')), ''];
+        $out[] = '## Services';
+        foreach (SiteServices::active() as $s) {
+            $out[] = $line($s['title'], '/services/' . $s['slug'], (string) ($s['meta_description'] ?: $s['summary']));
+        }
+        $out[] = '';
+        $out[] = '## Guides';
+        foreach (DB::all('SELECT slug, title, excerpt, meta_description FROM blog_posts WHERE ' . Blog::PUBLISHED . ' ORDER BY published_at DESC') as $p) {
+            $out[] = $line($p['title'], '/blog/' . $p['slug'], (string) ($p['meta_description'] ?: $p['excerpt']));
+        }
+        $out[] = '';
+        $out[] = '## Company';
+        foreach (\App\Support\SitePages::published() as $pg) {
+            $out[] = $line($pg['title'], '/' . $pg['slug'], '');
+        }
+        return implode("\n", $out) . "\n";
+    }
+
     public function robots(): string
     {
         header('Content-Type: text/plain; charset=utf-8');

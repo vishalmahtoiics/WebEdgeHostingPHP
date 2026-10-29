@@ -50,7 +50,7 @@ if (($wwwVariant || ($path !== '/' && str_ends_with($path, '/'))) && in_array($_
 }
 
 // Only the public website belongs in search results; panels, logins and webmail do not.
-if (!preg_match('#^/($|services/|blog(/|$)|(about|contact|privacy-policy|terms-and-conditions|refund-policy|disclaimer)$|sitemap\.xml$|robots\.txt$|ads\.txt$)#', $path)) {
+if (!preg_match('#^/($|services/|blog(/|$)|(about|contact|privacy-policy|terms-and-conditions|refund-policy|disclaimer)$|sitemap\.xml$|robots\.txt$|llms\.txt$|ads\.txt$)#', $path)) {
     header('X-Robots-Tag: noindex, nofollow');
 }
 

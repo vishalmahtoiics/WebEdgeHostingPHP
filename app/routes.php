@@ -19,6 +19,7 @@ $router->get('/blog/category/{cat}', [App\Controllers\BlogController::class, 'ca
 $router->get('/blog/{slug}', [App\Controllers\BlogController::class, 'show']);
 $router->get('/sitemap.xml', [App\Controllers\SeoController::class, 'sitemap']);
 $router->get('/robots.txt', [App\Controllers\SeoController::class, 'robots']);
+$router->get('/llms.txt', [App\Controllers\SeoController::class, 'llms']);
 $router->get('/ads.txt', [App\Controllers\SeoController::class, 'adsTxt']);
 
 // Authentication

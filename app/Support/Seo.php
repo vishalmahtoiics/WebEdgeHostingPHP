@@ -62,7 +62,7 @@ final class Seo
     {
         $img = (string) (self::$page['image'] ?? Settings::get('seo.og_image') ?: Settings::get('brand.logo'));
         if ($img === '') {
-            return null;
+            $img = '/assets/img/og-default.png';
         }
         return preg_match('#^https?://#', $img) ? $img : self::abs($img);
     }
@@ -194,7 +194,9 @@ final class Seo
             'datePublished' => date('c', strtotime((string) ($p['published_at'] ?: $p['updated_at']))),
             'dateModified' => date('c', strtotime((string) $p['updated_at'])),
             'author' => $p['author_name'] ?? null
-                ? ['@type' => 'Person', 'name' => $p['author_name']]
+                ? array_filter(['@type' => 'Person', 'name' => $p['author_name'], 'url' => self::abs('/about'),
+                    'description' => empty($p['author_id']) ? (trim((string) Settings::get('blog.author_bio')) ?: null) : null,
+                    'worksFor' => ['@id' => self::abs('/#organization')]])
                 : ['@id' => self::abs('/#organization')],
             'publisher' => ['@id' => self::abs('/#organization')],
             'inLanguage' => 'en-IN',
