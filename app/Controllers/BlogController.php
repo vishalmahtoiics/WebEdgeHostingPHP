@@ -69,6 +69,7 @@ final class BlogController extends Controller
         if (!$p || ($preview && !(Auth::isAdmin() && can('blog.manage')))) {
             abort(404);
         }
+        $p['author_name'] = $p['author_name'] ?: (trim((string) setting('blog.author_name')) ?: null);
         if (!$preview && !Auth::isAdmin()) {
             DB::run('UPDATE blog_posts SET views = views + 1 WHERE id = ?', [$p['id']]);
         }

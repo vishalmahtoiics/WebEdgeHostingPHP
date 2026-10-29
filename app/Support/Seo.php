@@ -220,7 +220,7 @@ final class Seo
         return '<script type="application/ld+json">' . $json . '</script>';
     }
 
-    /** Cheapest public plan expressed per month, in paise (null when there are no plans). */
+    /** Cheapest public plan expressed per month, in paise rounded up to whole rupees (null when there are no plans). */
     public static function cheapestMonthly(): ?int
     {
         static $min = false;
@@ -228,7 +228,7 @@ final class Seo
             $min = null;
             try {
                 foreach (DB::all("SELECT price, billing_cycle FROM plans WHERE status = 'active' AND is_public = 1 AND price > 0") as $p) {
-                    $m = (int) round((int) $p['price'] / max(1, BillingCycle::MONTHS[$p['billing_cycle']] ?? 1));
+                    $m = (int) ceil((int) $p['price'] / max(1, BillingCycle::MONTHS[$p['billing_cycle']] ?? 1) / 100) * 100;
                     $min = $min === null ? $m : min($min, $m);
                 }
             } catch (\PDOException) {

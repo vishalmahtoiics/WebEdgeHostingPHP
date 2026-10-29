@@ -41,6 +41,8 @@ final class SettingsSchema
                     'seo.google_verification' => ['label' => 'Google Search Console verification code', 'type' => 'text', 'default' => '', 'help' => 'In Search Console choose "HTML tag" and paste only the content value (the long code).'],
                     'seo.bing_verification' => ['label' => 'Bing Webmaster verification code', 'type' => 'text', 'default' => ''],
                     'seo.ga4_id' => ['label' => 'Google Analytics 4 measurement ID', 'type' => 'text', 'default' => '', 'help' => 'Looks like G-XXXXXXXXXX. Only the public website is tracked, never the panels.'],
+                    'blog.author_name' => ['label' => 'Default blog author name', 'type' => 'text', 'default' => '', 'help' => 'A real person\'s name shown on posts that have no author (Google trusts named authors more than a company name).'],
+                    'blog.author_bio' => ['label' => 'Default blog author bio', 'type' => 'textarea', 'default' => '', 'help' => 'One or two lines about the author\'s experience, shown at the end of each post.'],
                     'social.facebook' => ['label' => 'Facebook page URL', 'type' => 'url', 'default' => ''],
                     'social.instagram' => ['label' => 'Instagram profile URL', 'type' => 'url', 'default' => ''],
                     'social.linkedin' => ['label' => 'LinkedIn page URL', 'type' => 'url', 'default' => ''],

@@ -38,6 +38,17 @@ if ($base !== '' && str_starts_with($path, $base)) {
 }
 $path = '/' . ltrim($path, '/');
 
+// One address per page: www/non-www and trailing-slash variants get a 301 to the canonical URL.
+$canonHost = strtolower((string) parse_url((string) config('app.url', ''), PHP_URL_HOST));
+$reqHost = strtolower((string) preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+$wwwVariant = $canonHost !== '' && $reqHost !== $canonHost
+    && preg_replace('/^www\./', '', $reqHost) === preg_replace('/^www\./', '', $canonHost);
+if (($wwwVariant || ($path !== '/' && str_ends_with($path, '/'))) && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD'], true)) {
+    $query = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY);
+    header('Location: ' . App\Support\Seo::abs(rtrim($path, '/') ?: '/') . ($query !== '' ? '?' . $query : ''), true, 301);
+    exit;
+}
+
 // Only the public website belongs in search results; panels, logins and webmail do not.
 if (!preg_match('#^/($|services/|blog(/|$)|(about|contact|privacy-policy|terms-and-conditions|refund-policy|disclaimer)$|sitemap\.xml$|robots\.txt$|ads\.txt$)#', $path)) {
     header('X-Robots-Tag: noindex, nofollow');

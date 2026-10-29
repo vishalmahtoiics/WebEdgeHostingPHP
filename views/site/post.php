@@ -50,6 +50,12 @@ $shareText = rawurlencode($p['title']);
                 }
                 ?>
                 <div class="ws-prose-body"><?= $html ?></div>
+                <?php if (!$p['author_id'] && $p['author_name'] && ($bio = trim((string) setting('blog.author_bio')))): ?>
+                    <aside class="mt-4 p-3 border rounded-3" aria-label="About the author">
+                        <div class="fw-semibold"><i class="bi bi-person-circle me-1"></i><?= e($p['author_name']) ?></div>
+                        <p class="mb-0 mt-1 small"><?= e($bio) ?></p>
+                    </aside>
+                <?php endif; ?>
                 <div class="ws-share">
                     <span>Share this article:</span>
                     <a href="https://wa.me/?text=<?= $shareText ?>%20<?= $share ?>" target="_blank" rel="noopener" aria-label="Share on WhatsApp"><i class="bi bi-whatsapp"></i></a>
